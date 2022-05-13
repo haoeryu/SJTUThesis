@@ -14,7 +14,7 @@
     %
     % 标题
     %
-    title           = {上海交通大学学位论文 \LaTeX{} 模板示例文档},
+    title           = {高并发视频表决会议系统设计与开发},
     title*          = {A Sample Document for \LaTeX-based SJTU Thesis Template},
     %
     % 标题页标题
@@ -35,12 +35,12 @@
     %
     % 姓名
     %
-    author          = {某\quad{}某},
+    author          = {王\quad{}浩\quad{}宇},
     author*         = {Mo Mo},
     %
     % 指导教师
     %
-    supervisor      = {某某教授},
+    supervisor      = {吴\quad{}刚},
     supervisor*     = {Prof. Mou Mou},
     %
     % 副指导教师
@@ -50,7 +50,7 @@
     %
     % 学号
     %
-    id              = {0010900990},
+    id              = {5140719024},
     %
     % 学位
     %   本科生不需要填写
@@ -60,12 +60,12 @@
     %
     % 专业
     %
-    major           = {某某专业},
+    major           = {软件工程},
     major*          = {A Very Important Major},
     %
     % 所属院系
     %
-    department      = {某某系},
+    department      = {电子信息与电气工程学院},
     department*     = {Depart of XXX},
     %
     % 课程名称
@@ -169,6 +169,25 @@
 
 % 国际单位制宏包
 \usepackage{siunitx}[=v2]
+
+% 代码块宏包
+\usepackage{listings}
+% 代码高亮宏包
+\usepackage{xcolor}
+\lstset{
+  language=JavaScript,  %代码语言使用的是Java
+  frame=shadowbox, %把代码用带有阴影的框圈起来
+  rulesepcolor=\color{red!20!green!20!blue!20},%代码块边框为淡青色
+  keywordstyle=\color{blue!90}\bfseries, %代码关键字的颜色为蓝色，粗体
+  commentstyle=\color{red!10!green!70}\textit,    % 设置代码注释的颜色
+  showstringspaces=false,%不显示代码字符串中间的空格标记
+  numbers=left, % 显示行号
+  numberstyle=\tiny,    % 行号字体
+  stringstyle=\ttfamily, % 代码字符串的特殊格式
+  breaklines=true, %对过长的代码自动换行
+  extendedchars=false,  %解决代码跨页时，章节标题，页眉等汉字不显示的问题
+%   escapebegin=\begin{CJK*},escapeend=\end{CJK*},      % 代码中出现中文必须加上，否则报错
+  texcl=true}
 
 % 定理环境宏包
 \usepackage{ntheorem}
