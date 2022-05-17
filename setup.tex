@@ -174,20 +174,26 @@
 \usepackage{listings}
 % 代码高亮宏包
 \usepackage{xcolor}
-\lstset{
-  language=JavaScript,  %代码语言使用的是Java
-  frame=shadowbox, %把代码用带有阴影的框圈起来
-  rulesepcolor=\color{red!20!green!20!blue!20},%代码块边框为淡青色
-  keywordstyle=\color{blue!90}\bfseries, %代码关键字的颜色为蓝色，粗体
-  commentstyle=\color{red!10!green!70}\textit,    % 设置代码注释的颜色
-  showstringspaces=false,%不显示代码字符串中间的空格标记
-  numbers=left, % 显示行号
-  numberstyle=\tiny,    % 行号字体
-  stringstyle=\ttfamily, % 代码字符串的特殊格式
-  breaklines=true, %对过长的代码自动换行
-  extendedchars=false,  %解决代码跨页时，章节标题，页眉等汉字不显示的问题
-%   escapebegin=\begin{CJK*},escapeend=\end{CJK*},      % 代码中出现中文必须加上，否则报错
-  texcl=true}
+\usepackage{color}
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+\lstset{frame=tb,
+     language=Java,
+     aboveskip=3mm,
+     belowskip=3mm,
+     showstringspaces=false,
+     columns=flexible,
+     basicstyle = \ttfamily\small,
+     numbers=none,
+     numberstyle=\tiny\color{gray},
+     keywordstyle=\color{blue},
+     commentstyle=\color{dkgreen},
+     stringstyle=\color{mauve},
+     breaklines=true,
+     breakatwhitespace=true,
+     tabsize=3
+}
 
 % 定理环境宏包
 \usepackage{ntheorem}
