@@ -1,145 +1,27 @@
 % !TEX root = ../main.tex
 
-\chapter{系统设计}
+\chapter{背景介绍}
 
-\section{数学}
+数字化是信息技术发展的高级阶段，是数字经济的主要驱动力，随着新一代数字技术的快速发展，各行各业利用数字技术创造了越来越多的价值，这又推动了各行业加快进行数字化变革。本章从对律师行业破产领域的债权会议全面数字化的研究背景意义出发，系统阐述国内外研究最新研究成果。
 
-\subsection{数字和单位}
+\section{研究背景与意义}
 
-宏包 \pkg{siunitx} 提供了更好的数字和单位支持：
-\begin{itemize}
-  \item \num{12345.67890}
-  % For TeXLive 2021, siunitx >= 3.0
-  % \item \complexnum{1+-2i}
-  % For siunitx < 3.0
-  % \item \num{1+-2i}
-  \item \num{.3e45}
-  % For TeXLive 2021, siunitx >= 3.0
-  % \item \numproduct{1.654 x 2.34 x 3.430}
-  % For siunitx < 3.0
-  % \item \num{1.654 x 2.34 x 3.430}
-  \item \si{kg.m.s^{-1}}
-  \item \si{\micro\meter} $\si{\micro\meter}$
-  \item \si{\ohm} $\si{\ohm}$
-  \item \numlist{10;20}
-  \item \numlist{10;20;30}
-  \item \SIlist{0.13;0.67;0.80}{\milli\metre}
-  \item \numrange{10}{20}
-  \item \SIrange{10}{20}{\degreeCelsius}
-\end{itemize}
+\subsection{研究的背景}
+本文提到的数字化主要是利用数字技术，对具体业务、场景的数字化改造。数字技术革命推动了人类的数字化变革。人类社会的经济形态随着技术的进步不断演变，农耕技术开启了农业经济时代，工业革命实现了农业经济向工业经济的演变，如今数字技术革命，推动了人类生产生活的数字化变革，孕育出一种新的经济形态——数字经济，数字化成为数字经济的核心驱动力。数字技术的不断完善让数字化的价值得到充分发挥。近年来，物联网、云计算、人工智能等各类数字技术不断更新，从实验向实践，逐渐工业化，形成了完整的数字化价值链，在各个领域实现应用，推动了各个行业的数字化，为各行业不断创造新的价值。数字基础设施快速发展推动数字化的应用。近年来，我国不断加快数字基础设施建设，推进工业互联网、人工智能、物联网、车联网、大数据、云计算、区块链等技术集成创新和融合应用，让数字化应用更加广泛深入到社会经济运行的各个层面，推动数字经济的发展。
 
-\subsection{数学符号和公式}
+律师行业作为一个传统行业，目前大部分还处于传统的手工业时代，信息靠纸质材料收集整理，存储靠库房堆积，十分影响效率。如今正处疫情期间，线下办公的方式受到了极大的限制，而业务不会因为限制的存在而减少，大量的业务堆积带来了极大的不便，律师行业的数字化变革迫在眉睫。
 
-按照国标 GB/T 3102.11—1993《物理科学和技术中使用的数学符号》，
-微分符号 $\dd$ 应使用直立体。除此之外，数学常数也应使用直立体：
-\begin{itemize}
-  \item 微分符号 $\dd$：\cs{dd}
-  \item 圆周率 $\uppi$：\cs{uppi}
-  \item 自然对数的底 $\ee$：\cs{ee}
-  \item 虚数单位 $\ii$, $\jj$：\cs{ii} \cs{jj}
-\end{itemize}
+而在破产领域中，会议和表决的意义十分重大，决定着一个破产项目的走向，为了实现破产业务的数字化转型，专门设计针对破产项目表决的会议系统是必不可少的。企业破产项目债权人很容易高达千人级别甚至万人级别，如果同时进行多场会议，且在同一时间段进行表决的情况下，并发量将极大的提升，对服务器造成极大的压力，因此需要设计开发专门针对高并发情况下的会议表决系统。
 
-公式应另起一行居中排版。公式后应注明编号，按章顺序编排，编号右端对齐。
-\begin{equation}
-  \ee^{\ii\uppi} + 1 = 0,
-\end{equation}
-\begin{equation}
-  \frac{\dd^2 u}{\dd t^2} = \int f(x) \dd x.
-\end{equation}
+\subsection{研究的意义}
+破产领域的债权会议全面数字化的研究意义主要有以下三点。
 
-公式末尾是需要添加标点符号的，至于用逗号还是句号，取决于公式下面一句是接着公式说的，还是另起一句。
-\begin{equation}
-		\frac{2h}{\pi}\int_{0}^{\infty}\frac{\sin\left( \omega\delta \right)}{\omega}
-		\cos\left( \omega x \right) \dd\omega = 
-		\begin{cases}
-				h, \ \left| x \right| < \delta, \\
-				\frac{h}{2}, \ x = \pm \delta, \\
-				0, \ \left| x \right| > \delta.
-		\end{cases}
-\end{equation}
-公式较长时最好在等号“$=$”处转行。
-\begin{align}
-    & I (X_3; X_4) - I (X_3; X_4 \mid X_1) - I (X_3; X_4 \mid X_2) \nonumber \\
-  = & [I (X_3; X_4) - I (X_3; X_4 \mid X_1)] - I (X_3; X_4 \mid \tilde{X}_2) \\
-  = & I (X_1; X_3; X_4) - I (X_3; X_4 \mid \tilde{X}_2).
-\end{align}
+一是由于受新冠肺炎疫情影响，通过网络形式召开债权人会议成为管理人的主要选择。网络债权人会议所代表的破产案件线上化操作的优势是非常明显的——这种优势不仅体现在疫情期间，线上化操作无论程序设计还是设备使用，更加简便快捷和规范高效，代表破产业务未来的工作趋势。网络债权人会议是在网络时代下，利用网络技术对债权人会议召开方式的革新，有利于提高工作效率，有利于更好保障债权人权利。但网络债权人会议有别于传统债权人会议，产生了许多新的问题需要解决。债权会议系统有别于常规的会议系统，和破产法律紧密挂钩，常规的会议系统并不适用，因此需要设计开发针对性的债权会议系统。
 
-如果在等号处转行难以实现，也可在 $+$、$-$、$\times$、$\div$ 运算符号处转行，转行
-时运算符号仅书写于转行式前，不重复书写。
-\begin{multline}
-  \frac{1}{2} \Delta (f_{ij} f^{ij}) =
-    2 \left(\sum_{i<j} \chi_{ij}(\sigma_{i} - \sigma_{j})^{2}
-    + f^{ij} \nabla_{j} \nabla_{i} (\Delta f) \right. \\
-  \left. + \nabla_{k} f_{ij} \nabla^{k} f^{ij} +
-    f^{ij} f^{k} \left[2\nabla_{i}R_{jk}
-    - \nabla_{k} R_{ij} \right] \vphantom{\sum_{i<j}} \right).
-\end{multline}
+二是数字化以数据为主要生产要素，将企业中所有的业务、生产、营销、客户等有价值的人、事、物全部转变为数字存储的数据，形成可存储、可计算、可分析的数据、信息、知识，并和企业获取的外部数据一起，通过对这些数据的实时分析、计算、应用可以指导企业生产、运营等各项业务。而每一次的债权会议都能产生大量的数据，这些数据可以产生极大的经济价值，因此需要保证对这些数据的存储的可靠性。
 
-\subsection{定理环境}
+三是近年来随着计算机技术和网络技术的迅速崛起，互联网日渐深刻的在改变着人们的生产生活方式。互联网的发展带来了需求的激增、技术上的压力，系统架构也因此不断的演进、升级、迭代。从单一应用，到垂直拆分，到分布式服务，到 SOA，以及现在火热的微服务架构。虽然解决了大部分的问题，但是即时访问量比较巨大时，还是存在一些问题，尤其是高并发和高可用还是需要进行大量的设计和研究。对债权会议系统来说，一场债权会议的人数通常是千人到万人级别，有些甚至达到十万人级别，如果同时进行多场会议，且会议表决通常是集中在一段时间内的，这就带来了高并发问题，而债权会议的数据无比重要，如果丢失重要数据或者服务突然停摆，则意味着客户的永久失去及大量的经济损失，因此债权会议数字化过程中，高并发和高可用的针对性设计的重要性不言而喻。
 
-示例文件中使用 \pkg{ntheorem} 宏包配置了定理、引理和证明等环境。用户也可以使用
-\pkg{amsthm} 宏包。
 
-这里举一个“定理”和“证明”的例子。
-\begin{theorem}[留数定理]
-\label{thm:res}
-  假设 $U$ 是复平面上的一个单连通开子集，$a_1, \ldots, a_n$ 是复平面上有限个点，
-  $f$ 是定义在 $U \backslash \{a_1, \ldots, a_n\}$ 上的全纯函数，如果 $\gamma$
-  是一条把 $a_1, \ldots, a_n$ 包围起来的可求长曲线，但不经过任何一个 $a_k$，并且
-  其起点与终点重合，那么：
 
-  \begin{equation}
-    \label{eq:res}
-    \oint\limits_\gamma f(z)\, \dd z = 2\uppi \ii \sum_{k=1}^n \operatorname{I}(\gamma, a_k) \operatorname{Res}(f, a_k).
-  \end{equation}
 
-  如果 $\gamma$ 是若尔当曲线，那么 $\operatorname{I}(\gamma, a_k) = 1$，因此：
-
-  \begin{equation}
-    \label{eq:resthm}
-    \oint\limits_\gamma f(z)\, \dd z = 2\uppi \ii \sum_{k=1}^n \operatorname{Res}(f, a_k).
-  \end{equation}
-
-  在这里，$\operatorname{Res}(f, a_k)$ 表示 $f$ 在点 $a_k$ 的留数，
-  $\operatorname{I}(\gamma, a_k)$ 表示 $\gamma$ 关于点 $a_k$ 的卷绕数。卷绕数是
-  一个整数，它描述了曲线 $\gamma$ 绕过点 $a_k$ 的次数。如果 $\gamma$ 依逆时针方
-  向绕着 $a_k$ 移动，卷绕数就是一个正数，如果 $\gamma$ 根本不绕过 $a_k$，卷绕数
-  就是零。
-
-  定理~\ref{thm:res} 的证明。
-
-  \begin{proof}
-    首先，由……
-
-    其次，……
-
-    所以……
-  \end{proof}
-\end{theorem}
-
-\section{引用文献的标注}
-
-按照教务处的要求，参考文献外观应符合国标 GB/T 7714 的要求。模版使用 \BibLaTeX\
-配合 \pkg{biblatex-gb7714-2015} 样式包
-\footnote{\url{https://www.ctan.org/pkg/biblatex-gb7714-2015}}
-控制参考文献的输出样式，后端采用 \pkg{biber} 管理文献。
-
-请注意 \pkg{biblatex-gb7714-2015} 宏包 2016 年 9 月才加入 CTAN，如果你使用的
-\TeX\ 系统版本较旧，可能没有包含 \pkg{biblatex-gb7714-2015} 宏包，需要手动安装。
-\BibLaTeX\ 与 \pkg{biblatex-gb7714-2015} 目前在活跃地更新，为避免一些兼容性问
-题，推荐使用较新的版本。
-
-正文中引用参考文献时，使用 \verb|\cite{key1,key2,key3...}| 可以产生“上标引用的参
-考文献”，如 \cite{Yu2001,Cheng1999,LSC1957}。使用
-\verb|\parencite{key1,key2,key3...}| 则可以产生水平引用的参考文献，例如
-\parencite{Li1999,Jiang1989,Hopkinson1999}。请看下面的例子，将会穿插使用水平的和
-上标的参考文献：普通图书\parencite{Yu2001,Jiang1998}，论文集、会议录
-\cite{CSTAM1990}，科技报告\parencite{WHO1970}，学位论文\cite{Zhang1998}，专利文
-献\parencite{Jiang1989,HBLZ2001}，专著中析出的文献\cite{Cheng1999,GBT2659}，期刊
-中析出的文献\parencite{Li1999,Li2000}，报纸中析出的文献\cite{Ding2000}, 电子文献
-\parencite{Jiang1999,Christine1998,Xiao2001}。
-
-可以使用 \verb|\nocite{key1,key2,key3...}| 将参考文献条目加入到文献表中但不在正
-文中引用。使用 \verb|\nocite{*}| 可以将参考文献数据库中的所有条目加入到文献表
-中。
-\nocite{Yang1999,Schinstock2000,Wen1990,GBT16159}
