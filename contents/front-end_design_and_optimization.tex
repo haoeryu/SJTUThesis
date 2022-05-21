@@ -1,3 +1,5 @@
+% !TeX root = ../main.tex
+
 \chapter{系统前端设计与优化}
 本章节主要介绍对本系统前端采用的特殊设计以及采用的原因及实现。
 
@@ -94,18 +96,12 @@ Immutable 中文意义为不可变的，Immutable Data 就是一旦创建，就�
 
 \begin{figure}[!htp]
     \centering
-    \begin{subfigure}{0.4\textwidth}
+    \begin{subfigure}{1\textwidth}
       \centering
       \includegraphics[height=4cm]{immutable1.png}
       \caption{}
     \end{subfigure}
-    \hspace{1cm}
-    \begin{subfigure}{0.4\textwidth}
-      \centering
-      \includegraphics[height=4cm]{immutable2.png}
-      \caption{}
-    \end{subfigure}
-    \begin{subfigure}{0.4\textwidth}
+    \begin{subfigure}{1\textwidth}
       \centering
       \includegraphics[height=4cm]{immutable3.png}
       \caption{}
@@ -116,7 +112,7 @@ Immutable 中文意义为不可变的，Immutable Data 就是一旦创建，就�
 
   接下来通过一个例子介绍 Structural Sharing（结构共享），假设存在一个旧数据 oldData，它的对象树中有8个节点，如图~\ref{fig:immutable} (a)所示，现在对对象树中的节点7进行修改，这个操作将会返回一个新的 Immutable 对象。
 
-   根据 Structural Sharing（结构共享）的原则，只修改节点7和受节点7影响的父节点，根据图~\ref{fig:immutable} (a) 可以看到受到影响的节点有节点1、节点2和节点7。对这三个节点复制一遍创建出新的节点9、节点10及节点11，节点9为节点7的复制，与原子节8相连，节点10为节点3的复制与节点7的复制节点9相连，节点11为节点1的复制，与节点1的子节点2和节点3的复制节点10相连，如图~\ref{fig:immutable} (b)所示，最后得到了一个新的Immutable 对象，如图~\ref{fig:immutable} (c)所示。
+   根据 Structural Sharing（结构共享）的原则，只修改节点7和受节点7影响的父节点，根据图~\ref{fig:immutable} (a) 可以看到受到影响的节点有节点1、节点2和节点7。对这三个节点复制一遍创建出新的节点9、节点10及节点11，节点9为节点7的复制，与原子节8相连，节点10为节点3的复制与节点7的复制节点9相连，节点11为节点1的复制，与节点1的子节点2和节点3的复制节点10相连，如图~\ref{fig:immutable} (a)所示，最后得到了一个新的Immutable 对象，如图~\ref{fig:immutable} (b)所示。
 
   根据前面说到的 React 渲染问题，如果使用 Map，直接更新 Map 并不能触发渲染，而使用ImmutableMap 则可以直接触发渲染，对比效果见下方代码展示。
 
@@ -193,15 +189,15 @@ Immutable 中文意义为不可变的，Immutable Data 就是一旦创建，就�
 
   \begin{figure}[!htp]
     \centering
-    \begin{subfigure}{0.45\textwidth}
+    \begin{subfigure}{1\textwidth}
       \centering
-      \includegraphics[height=4cm,width=7cm]{re.png}
+      \includegraphics[height=6cm]{re.png}
       \caption{高精度议程表决详情}
     \end{subfigure}
     \hspace{1cm}
-    \begin{subfigure}{0.45\textwidth}
+    \begin{subfigure}{1\textwidth}
       \centering
-      \includegraphics[height=4cm,width=7cm]{noRe.png}
+      \includegraphics[height=6cm]{noRe.png}
       \caption{低精度议程表决详情}
     \end{subfigure}
     \caption{高精度和低精度对比图}
@@ -217,19 +213,10 @@ Immutable 中文意义为不可变的，Immutable Data 就是一旦创建，就�
 
   \subsection{会议用户相关的数据结构}
 
+
   \begin{figure}[!htp]
     \centering
-    \begin{subfigure}{0.6\textwidth}
-      \centering
-      \includegraphics[height=4cm,width=10cm]{meetingUser.png}
-      \caption{}
-    \end{subfigure}
-    \hspace{1cm}
-    \begin{subfigure}{0.3\textwidth}
-      \centering
-      \includegraphics[height=2cm,width=6cm]{meetingUserState.png}
-      \caption{}
-    \end{subfigure}
+    \includegraphics[height=4cm]{meetingUser.png}
     \caption{用户相关数据结构}
     \label{fig:meetingUser}
   \end{figure}
@@ -237,7 +224,7 @@ Immutable 中文意义为不可变的，Immutable Data 就是一旦创建，就�
   meetingAgent 和 meetingManager 继承自 baseMeetingUser， baseMeetingUser 中包含信息用户Id,用户姓名和用户的电话号码。 meetingManager 的类型为 PRACTITIONER (管理人)， meetingAgent 的类型为 AGENT (代理人)，如图~\ref{fig:meetingUser}(a)。
 
   meetingUserState 中包含两个哈希表分别存储 meetingAgentMap 和
-  meetingManagerMap 。 两个哈希表的键值对的键都是用户的ID号，值都是对应的 meetingAgent 和 meetingManager 实体，如图~\ref{fig:meetingUser}(b)。
+  meetingManagerMap 。 两个哈希表的键值对的键都是用户的ID号，值都是对应的 meetingAgent 和 meetingManager 实体。
 
   \subsection{表决相关的数据结构}
 
@@ -258,7 +245,7 @@ Immutable 中文意义为不可变的，Immutable Data 就是一旦创建，就�
 
     \begin{figure}[!htp]
       \centering
-      \includegraphics[height=10cm]{schedule.png}
+      \includegraphics[height=10cm,width=14cm]{schedule.png}
       \caption{议程相关数据结构示意图}
       \label{fig:schedule}
     \end{figure}
@@ -275,7 +262,7 @@ Immutable 中文意义为不可变的，Immutable Data 就是一旦创建，就�
 
   \begin{figure}[!htp]
     \centering
-    \includegraphics[height=8.5cm]{group.png}
+    \includegraphics[height=8.5cm, width=14cm]{group.png}
     \caption{表决组相关数据结构示意图}
    \label{fig:group}
   \end{figure}

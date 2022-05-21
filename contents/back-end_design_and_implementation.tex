@@ -1,3 +1,5 @@
+% !TeX root = ../main.tex
+
 \chapter{系统后端设计与实现}
 本章节主要介绍系统后端针对不同业务做出的设计，包括数据结构设计和算法设计和实现。
 
@@ -11,7 +13,7 @@ Group, Ticket, MeetingCreditor, ChatRoom 这 6 种类型的实体以满足需求
 
 \begin{figure}[!htp]
     \centering
-    \includegraphics[height=10cm]{meetingER.png}
+    \includegraphics[width=14cm]{meetingER.png}
     \caption{会议系统数据库 ER 图}
     \label{fig:meetingER}
   \end{figure}
@@ -26,7 +28,7 @@ Group, Ticket, MeetingCreditor, ChatRoom 这 6 种类型的实体以满足需求
 \subsubsection{创建和修改会议}
 在原系统中议程被称为议题，下面统称议程。原系统会议模块创建和修改会议分为三步，分别是填写会议基本信息、填写议程相关信息、导入议程表决信息，只有三步全部完成会议才能创建成功，否则为暂存状态。原本的设计存在一些问题，一是会议创建分为三步过于累赘，导入议程表决信息并不属于创建会议的工作。二是会议和表决强绑定，仅含有无表决议程的会议无法通过导入议程表决信息这一步。
 
-基于以上问题，对创建和修改会议进行了调整。一是将填写会议基本信息和填写议程相关信息合并为一步。在实际实现的时候发现创建会议时，在创建会议请求发送以前，就需要获取会议 id 用于存储会议文件和议程文件至 OSS 文件系统对应会议 id 目录下，因此在创建会议前需要先获取会议 id 。本系统会议的 id 号由 redis 数据库存储的对应 id 控制，因此在创建会议前，先向 redis 预约一个会议 id， 在创建会议时将对应会议文件和议程文件存至 OSS文件系统对应目录下，由于从 redis 中获取 id 后，设置了 id 自增，因此会议 id 号预约唯一。并且由于创建会议时，有多个实体需要存至Mongo数据库，因此实现方法时添加了SpringBoot 的事务性注解，一旦创建会议失败，回滚所有数据库操作。二是将导入议程表决信息从创建修改会议中拆出，仅含有无表决议程的会议也可以正常创建会议，而导入议程表决信息仅有含有需表决议程且导入标记为 false 的会议需要进行，通过这样的设计，仅无表决议程的会议可以正常完成流程。
+基于以上问题，对创建和修改会议进行了调整。一是将填写会议基本信息和填写议程相关信息合并为一步。在实际实现的时候发现创建会议时，在创建会议请求发送以前，就需要获取会议 id 用于存储会议文件和议程文件至 OSS 文件系统对应会议 id 目录下，因此在创建会议前需要先获取会议 id 。本系统会议的 id 号由 Redis 数据库存储的对应 id 控制，因此在创建会议前，先向 Redis 预约一个会议 id， 在创建会议时将对应会议文件和议程文件存至 OSS文件系统对应目录下，由于从 Redis 中获取 id 后，设置了 id 自增，因此会议 id 号预约唯一。并且由于创建会议时，有多个实体需要存至Mongo数据库，因此实现方法时添加了SpringBoot 的事务性注解，一旦创建会议失败，回滚所有数据库操作。二是将导入议程表决信息从创建修改会议中拆出，仅含有无表决议程的会议也可以正常创建会议，而导入议程表决信息仅有含有需表决议程且导入标记为 false 的会议需要进行，通过这样的设计，仅无表决议程的会议可以正常完成流程。
 
 \subsubsection{删除会议}
 原系统会议模块中，删除会议为直接从数据库中删除对应会议全部数据，由于需要规避误删及恶意删除的情况以及需要提供删除恢复的功能，直接从数据库中删除数据的方式不可取，本系统删除操作全部改为采用逻辑删除，对应实体添加 deleted 字段用以表示对应数据是否被删除，为 true 则表示该数据已被删除。
@@ -43,8 +45,12 @@ Group, Ticket, MeetingCreditor, ChatRoom 这 6 种类型的实体以满足需求
     \begin{center}
       \caption{表决信息导入模板}
       \label{fig:meetingImport}
-      \begin{tabular}{|c|c|c|c|c|c|}
-        \textbf{债权人名称} & \textbf{编号} & \textbf{债权所在表决组} & \textbf{表决金额} & \textbf{参会人姓名} & \textbf{参会人手机号}
+      \begin{tabular}{c c c c c c }
+        \hline
+        \textbf{债权人名称} & \textbf{编号} & \textbf{债权所在表决组} & \textbf{表决金额} & \textbf{参会人姓名} & \textbf{参会人手机号} \\
+        \hline
+        \\
+        \hline
       \end{tabular}
     \end{center}
   \end{table}
@@ -55,8 +61,12 @@ Group, Ticket, MeetingCreditor, ChatRoom 这 6 种类型的实体以满足需求
     \begin{center}
       \caption{其他参会人员信息导入模板}
       \label{fig:otherUserImport}
-      \begin{tabular}{|c|c|c|}
-       \textbf{参会人姓名} & \textbf{参会人手机号} & \textbf{参会人类型}
+      \begin{tabular}{ c c c }
+        \hline
+       \textbf{参会人姓名} & \textbf{参会人手机号} & \textbf{参会人类型} \\
+       \hline
+       \\
+       \hline
       \end{tabular}
     \end{center}
   \end{table}
@@ -67,8 +77,12 @@ Group, Ticket, MeetingCreditor, ChatRoom 这 6 种类型的实体以满足需求
     \begin{center}
       \caption{密码反馈模板}
       \label{fig:passwordReturn}
-      \begin{tabular}{|c|c|c|c|c|}
-       \textbf{用户名称} & \textbf{手机号（登录账号）} & \textbf{密码} & \textbf{用户类型} & \textbf{代理债权人名单}
+      \begin{tabular}{ c c c c c }
+        \hline
+       \textbf{用户名称} & \textbf{手机号（登录账号）} & \textbf{密码} & \textbf{用户类型} & \textbf{代理债权人名单} \\
+       \hline
+       \\
+       \hline
       \end{tabular}
     \end{center}
   \end{table}
@@ -82,7 +96,7 @@ Group, Ticket, MeetingCreditor, ChatRoom 这 6 种类型的实体以满足需求
 
   \begin{figure}[!htp]
     \centering
-    \includegraphics[height=6cm]{live.png}
+    \includegraphics[height=5cm,width=14cm]{live.png}
     \caption{直播服务流程示意图}
     \label{fig:live}
   \end{figure}
@@ -95,6 +109,148 @@ Group, Ticket, MeetingCreditor, ChatRoom 这 6 种类型的实体以满足需求
   \section{实时后端设计与实现}
   实时后端包含了所以具有实时性的服务，包括聊天室服务和实时表决服务。WebSocket后端使用Golang实现。
 
+  \subsection{数据分类}
+
+\begin{figure}[!htp]
+  \centering
+  \includegraphics[width=12cm]{dataClassification.png}
+  \bicaption[数据分类]
+    {数据类型分类示意图}
+    {Schematic diagram of data type classification}
+ \label{fig:dataClassification}
+\end{figure}
+
+如图~\ref{fig:dataClassification}，影响实例外在表现的所有副作用数据统称为有状态数据。
+有状态数据分为两类，一类是会话数据，一类是业务数据。其中会话数据及业务数据中的Entity数据存于 Redis 中，其余数据均只存于实例内存中。
+
+会话数据为连接的元信息，例如用户 Id ，聊天室 Id ， jwt 验证信息等等。
+在用户刚刚与实例建立连接时，实例将初始化好用户的会话数据并将其暂存于 Redis 中。
+会话数据为每个用户对每个服务的独有数据，包含用户、连接、权限三者的元信息。
+用户下线后，会话数据将会被清除。
+同用户异地登录，所建立的会话会将原有会话顶替下线（实时服务一账号只可一人用）。
+
+业务数据为影响用户前端展示的数据。例如：某债权人的表决情况，某会议的总签到人数等。
+业务数据又分为 View 和 Entity 两种数据。
+
+Entity 为 Mongo 中存储的真实数据，实例会将其暂存于 Redis 中。View 数据是抽象概念，指将对某类用户前端视图展现的全量信息。例如：管理人可见的表决统计总表数据，或者整个聊天室的所有聊天内容和封禁状态。View 并非 Mongo 内的实体数据，往往是多个 Entity 的聚合数据，或者是全体 Entity 的子集。View 数据内部包含同源数据与聚合数据两类。
+
+同源数据是全体 Entity 的子集，内存中为至 Entity 的索引。以保证完全与 Entity 数据保持一致。比如某债权人对某表决是否投票，投了同意还是反对。
+
+聚合数据是由 Entity 聚合而出的数据，会随着某些 Entity 的改变而改变。比如某个会议下某议题的总同意金额。
+
+同源数据和聚合数据采用不同结构存储。它们的区分是调和 “性能” 与 “数据一致性” 矛盾的基石，下节数据存储将会介绍。
+
+\subsection{数据存储}
+
+\begin{figure}[!htp]
+  \centering
+  \includegraphics[width=12cm]{dataSave.png}
+  \bicaption[Entity存储示意]
+    {Entity存储示意图}
+    {Entity Storage Diagram}
+ \label{fig:dataSave}
+\end{figure}
+
+不同类的业务数据存储形式不同。Entity 数据最终会持久化至 Mongo。Entity 被分散到三处。实例内存是 Redis 的 Cache，而 Redis 事实上是 Mongo 的 Cache。
+
+实例必须无状态，其状态必须可从 Redis 恢复。因此实例内存至 Redis 为 Write Through 策略。本⽂的第 5.2.2 节的实验已表明，3 个节点组成的单 Master 的 Mongo 集群仅⽀持 700+ 左右的 QPS，为性能瓶颈。因此 Redis 至 Mongo 为 Write Back 策略。如图~\ref{fig:dataSave}所示。
+
+View 数据只保存在实例内存中。View 内部存储的同源数据事实上只是到某些 Entity 的映射（id、指针等）。View 内部存储的聚合数据是对应的聚合后的计算值。由于 View 内部存储的事实上只是 Entity 的映射，保证 View 的数据一致性的前提下提高了性能。
+
+\subsection{数据推送}
+
+\begin{figure}[!htp]
+  \centering
+  \includegraphics[height=3cm]{dataPush.png}
+  \bicaption[推送方式]
+    {推送方式示意图}
+    {Schematic diagram of push mode}
+ \label{fig:dataPush}
+\end{figure}
+
+实时系统的核心即后台向前端的数据推送模式。业务数据同时通过 Base 和 Patch 两种方式推送。
+
+Patch 推送则是指对 Entity 与 View 的更新事件。Patch 推送产生的原因可能来自于用户，如某用户发送了一条消息，也可能来自于集群，如结束表决的定时任务到时间了。Patch 推送产生后，先更新 Entity，再更新 View，最后再进行推送。View 数据可通过有序的 Patch 推送计算出来。
+
+Base 推送是指将某个 View 数据推送给前端。Base 推送产生的原因可能来自于用户请求，如初始化内容，也可能来自于服务端的定时推送，如管理人查看表决详情的服务端推送。
+
+\subsection{数据更新}
+
+Entity 数据的更新完全来源于 Patch 推送。
+
+View 数据的更新来源于 Patch 推送以及定时的 Entity 重新聚合计算。Patch 推送可能会更新前端 View 中的 聚合数据。在该策略下，必须进行定时重新聚合计算。定时的重新聚合计算目的是进行 聚合数据 的修正。常规地，在定时重新聚合计算完成后，一个 Base 推送应该被发起。
+
+同源数据并不会被主动更新，因为它是到 Entity 的引用，Entity 被更新则意味着同源数据被更新。
+
+\subsection{数据流}
+本节中 “连接” 指 WebSocket 协议的连接，而 “会话” 指用户对服务的请求上下文。
+\subsubsection{用户建立会话数据流}
+\begin{figure}[!htp]
+  \centering
+  \includegraphics[width=12cm]{createDataflow.png}
+  \bicaption[建立数据流]
+    {用户建立会话数据流示意图}
+    {Schematic diagram of user establishing session data flow}
+ \label{fig:createDataflow}
+\end{figure}
+用户如果要与实例交互，必须先成功建立连接，然后建立会话。
+会话是否建立及会话是否存在的判定均以是否建立会话数据，是否存在会话数据为准。
+一个用户在同一时刻对一个实时服务只能有一个会话。
+
+1. 客户端向 WebSocket 实例请求搭建连接，实例拿起该用户的会话并且建立锁，然后向 Redis 请求检查用户会话数据：
+
+\quad{}a. 如果已经存在会话数据，并且通过会话数据判定连接未关闭，则转至第 2 步解决异地登陆。
+
+\quad{}b. 如果已经存在会话数据，并且通过会话数据判定连接已关闭，则转至第 4 步覆盖会话；
+
+\quad{}c. 如果检查发现不存在会话数据，则转至第 4 步建立会话；
+
+2. 实例发现异地登录请求，通过 Redis 中的连接，通知占用会话的用户异地登陆的异常；
+
+3. 实例通过清除 Redis 中的对应会话数据关闭与当前占用会话用户的连接，并且转至第 4 步覆盖会话；
+
+4. 实例生成针对该用户的会话数据，与该用户建立连接，并将会话数据存入 Redis；
+
+5. 实例保存会话数据至内存，同时保存当前连接。此时视为会话已经成功建立；
+
+6. 实例放开该用户的会话建立锁，通知用户，会话建立成功，可以接受推送订阅和推送请求。
+\subsubsection{用户请求数据流}
+\begin{figure}[!htp]
+  \centering
+  \includegraphics[width=12cm]{requestDateflow.png}
+  \bicaption[请求数据流]
+    {用户请求数据流示意图}
+    {User request data flow diagram}
+ \label{fig:requestDateflow}
+\end{figure}
+框架数据流整体过程如下：
+
+1. 客户端向 WebSocket 实例发送请求：
+
+\quad{}a. 如果 Redis 中已经缓存了相关数据，并且当前请求为读请求，则跳转至第 10 步；
+
+\quad{}b. 如果 Redis 中已经缓存了相关数据，并且当前请求为写请求，则跳转至第 2 步；
+
+\quad{}c. 如果 Redis 中没有相关数据的缓存数据，则直接跳转至第 4 步；
+
+2. 根据写请求的具体要求，WebSocket 实例向 Redis 中写入/更新 Entity 和 View数据；
+
+3. 根据写请求的具体要求，WebSocket 实例将相关数据写入实例内存中，转至第 10 步；
+
+4. 若 Redis 没有缓存数据，则由 WebSocket 实例调用 SpringBoot 后端相关服务接口；
+
+5. SpringBoot 后端向 Mongo 数据库请求获取相关 Entity 数据；
+
+6. Mongo 数据将相关 Entity 数据返回至 SpringBoot 后端中；
+
+7. SpringBoot 后端返回相关 Entity 数据，由 WebSocket 实例计算出相关 View 数据；
+
+8. WebSocket 实例将相关 Entity 数据和 View 数据缓存到 Redis 中；
+
+9. Redis 缓存 Entity 数据和 View 数据成功，WebSocket 也在实例内存中保存对应数据；
+
+10. WebSocket 将请求结果返回给 Client。
+
   \subsection{WebSocket 业务通信协议}
   在系统的实际业务中，WebSocket 消息传输为双向的。任一端都是 client 和 server。
 无论 client 或 server，WebSocket 的所有消息入口只有一个。消息又只发向数个业务中的一个。
@@ -103,7 +259,7 @@ Group, Ticket, MeetingCreditor, ChatRoom 这 6 种类型的实体以满足需求
 
 \begin{figure}[!htp]
     \centering
-    \includegraphics[height=6cm]{wsxy.png}
+    \includegraphics[height=5cm,width=14cm]{wsxy.png}
     \caption{WebSocket 业务通信协议示意图}
     \label{fig:wsxy}
   \end{figure}
@@ -236,13 +392,15 @@ Message 的先后顺序能让聊天室快速构造 Base 推送。
     \label{fig:wsChatRoom}
   \end{figure}
 
-  \subsubsection{部分实现}
+  \subsubsection{重要接口实现}
+  本小节展示了聊天室服务一些重要接口的参数和响应，包括会话握手请求，生成 Base 推送，下载聊天记录，发送新消息，封禁和解禁用户，强制用户下线，接受消息推送，接受 ban 推送等。参数和响应若未列出则默认为 null。
+
   1. Handshake：会话握手请求
 
   仅限用户发向实例。
-  必须在用户握手成功，建立起会话数据后，服务端才会处理用户发来的请求。
+  此接口是聊天室服务的基础，用户在使用聊天室服务时，必须在用户握手成功，建立起会话数据后，服务端才会处理用户发来的请求。
 
-  如果该用户已有会话，则强制原有会话下线。
+  注意，每个用户同一时间不能在多地登陆，如果该用户已经建立了会话数据后，出现异地登录的情况，则强制原先建立的会话下线。
 
   {\setmainfont{Courier New Bold}
   \begin{lstlisting}
@@ -253,14 +411,12 @@ Message 的先后顺序能让聊天室快速构造 Base 推送。
         "userType": string, // 用户类型，只接受 PRACTITIONER 和 CREDITOR
         "userName": string
     }
-    // 响应：
-    null
    \end{lstlisting}}
 
    2. GenerateBase：生成 Base 推送
 
    仅限用户发向实例。
-   遍历当前 View，返回该用户可见的消息。
+   实例通过遍历存储消息的 View，返回该用户可见的消息。
 
    {\setmainfont{Courier New Bold}
    \begin{lstlisting}
@@ -276,24 +432,12 @@ Message 的先后顺序能让聊天室快速构造 Base 推送。
     }
     \end{lstlisting}}
 
-    3. DownloadMessages：下载聊天记录
-
-    仅限用户发向实例。仅管理人可用，下载整个 View 内的所有内容，无论其对该管理人是否可见。
- 
-    {\setmainfont{Courier New Bold}
-    \begin{lstlisting}
-        // 参数
-        null
-        // 响应
-        Message[]
-     \end{lstlisting}}
-
-     4. NewMessage：发送新消息
+     3. NewMessage：发送新消息
 
      仅限用户发向实例。
-     仅用户未被 ban 时，且聊天室未关闭时可用。
-     在 View 数组放置一个空消息，放锁，将消息存入 Reids。
-     成功后，该消息会存入 View 数组中对应的空消息处，并引发一次 patch 推送。
+     仅在用户未被 ban 且聊天室未关闭时可用。
+     在 View 数组放置一个空消息，放锁，然后将消息存入 Reids。
+     操作成功后，该消息会存入 View 数组中对应的空消息处，并引发一次 patch 推送。
   
      {\setmainfont{Courier New Bold}
      \begin{lstlisting}
@@ -305,12 +449,10 @@ Message 的先后顺序能让聊天室快速构造 Base 推送。
         }
       \end{lstlisting}}
 
-      5. Ban：封禁 / 解禁用户
+      4. Ban：封禁 / 解禁用户
 
-      仅限用户发向实例。
-仅聊天室未关闭时可用。
-仅管理人可用，且不可封禁管理人。
-   
+      仅限用户发向实例。此接口仅聊天室未关闭时可用且仅限管理人可用。通过此接口管理员可以对聊天室内的债权人用户进行封禁和解禁操作，此接口不可封禁管理人。
+
       {\setmainfont{Courier New Bold}
       \begin{lstlisting}
         // 参数
@@ -318,15 +460,13 @@ Message 的先后顺序能让聊天室快速构造 Base 推送。
             "userId": number,
             "ban": bool // 指明该用户是否被 ban
         }
-        // 响应
-        null
        \end{lstlisting}}
 
-       6. ForceOffline：强制用户下线
+       5. ForceOffline：强制用户下线
 
        仅限实例发向用户。
-       如果用户建立会话时，已有该用户的会话，则实例会发送给被顶替用户下述内容，并在最多两秒后关闭连接。
-   
+       聊天室服务不允许同时多地登录，如果用户建立会话时，发现本聊天室已有该用户的会话，则实例会发送给被顶替用户异地登录者的IP和登录时间，并在两秒内关闭原有会话连接。此接口无需响应。
+
       {\setmainfont{Courier New Bold}
       \begin{lstlisting}
         // 参数
@@ -334,33 +474,16 @@ Message 的先后顺序能让聊天室快速构造 Base 推送。
             "time": number, // 异地登录者的登录时间
             "ip": string // 异地登录者的登录 IP
         }
-        // 响应：无需响应
        \end{lstlisting}}
 
-       7. patchMessage：用户接受消息推送
+       6. patchMessage：用户接受消息推送
 
        仅限实例发向用户。
-       在用户发送新消息，并成功保存后，对应的消息会 Patch 推送给发送者和接受者。
-   
+       在用户发送新消息，并成功在消息 View 中保存后，对应的消息会 Patch 推送给发送者和接受者。此接口无需响应。
       {\setmainfont{Courier New Bold}
       \begin{lstlisting}
         // 参数
         Message
-        // 响应：无需响应
-       \end{lstlisting}}
-
-       8. patchBan：用户接受 ban 推送
-
-       仅限实例发向用户。
-在用户的 ban 状态产生变化，并成功保存后，对应的消息会 Patch 推送给被 ban 人和全体管理人。
-   
-      {\setmainfont{Courier New Bold}
-      \begin{lstlisting}
-        // 参数
-        {
-            "userId": number,
-            "ban": bool // 指明该用户是否被 ban
-        }
        \end{lstlisting}}
 
   \subsubsection{交互设计}
@@ -395,30 +518,30 @@ Message 的先后顺序能让聊天室快速构造 Base 推送。
 
   \quad{}1. 管理人进入会议界面，前端向 SpringBoot 后端发送请求；
 
-  \quad{}2. 后端返回统计数据给前端，前端收到请求后将数据在前端渲染，生成视图,前端接收到数据后需要将数据持久化到客户端上，从而减少后端每次计算全量数据的压力。为了明确前端数据是否需要被更新，后端数据应当给统计数据维护一个类似版本号的字段，若发现版本号变更，则更新数据，重新从 springboot 拉取一遍全量数据；
+  \quad{}2. 后端返回统计数据给前端，前端收到请求后将数据在前端渲染，生成视图,前端接收到数据后需要将数据持久化到客户端上，从而减少后端每次计算全量数据的压力。为了明确前端数据是否需要被更新，后端数据应当给统计数据维护一个类似版本号的字段，若发现版本号变更，则更新数据，重新从 SpringBoot 拉取一遍全量数据；
 
   \quad{}3. 前端询问会议是否已结束；
 
-  \quad{}4. Springboot 返回会议结束标识，若：
+  \quad{}4. SpringBoot 返回会议结束标识，若：
 
   \quad{}\quad{}a. 会议已结束，该流程结束；
   
   \quad{}\quad{}b. 会议未结束，进入第 5 步；
   
-  \quad{}5. 会议未结束，则管理人和后端建立 websocket 链接，等待数据推送；
+  \quad{}5. 会议未结束，则管理人和后端建立 WebSocket 链接，等待数据推送；
   
-  \quad{}6. Websocket 获取会议相关 Entity，数据不存在，向 Springboot 发起数据请求,只有 websocket 本地没有缓存全量 Entity 时才会向 springboot 返回全量的数据，其他时候直接依据内存 / Redis 返回的缓存计算结果；
+  \quad{}6. WebSocket 获取会议相关 Entity，数据不存在，向 SpringBoot 发起数据请求,只有 WebSocket 本地没有缓存全量 Entity 时才会向 SpringBoot 返回全量的数据，其他时候直接依据内存 / Redis 返回的缓存计算结果；
   
-  \quad{}7. Springboot 返回所有的 Entity，Websocket 将其缓存在 Redis 中，并缓存在内存中；
+  \quad{}7. SpringBoot 返回所有的 Entity，WebSocket 将其缓存在 Redis 中，并缓存在内存中；
   
-  \quad{}8. Websocket 根据实际情况实时推送数据到前端，前端依据 Websocket 推的数据进行更新，websocket 不会返回给前端全量的数据，而是一个数据片段，包含各个议题的表决情况、参会人数情况和被更新的数据（比如某自然人就议题 A 提了同意票）。
+  \quad{}8. WebSocket 根据实际情况实时推送数据到前端，前端依据 WebSocket 推的数据进行更新，WebSocket 不会返回给前端全量的数据，而是一个数据片段，包含各个议题的表决情况、参会人数情况和被更新的数据（比如某自然人就议题 A 提了同意票）。
 
   \subsubsection{实时表决服务内部数据流和控制流流转}
-  Websocket 会在下列场合和 Springboot 的 meeting 服务、前端（债权人端和管理人端）以及 Redis 服务进行通信：
+  WebSocket 会在下列场合和 SpringBoot 的 meeting 服务、前端（债权人端和管理人端）以及 Redis 服务进行通信：
 
-  \quad{}1. 当 Websocket 的缓存 Redis 没有缓存会议任何数据时，Websocket 首先要和 springboot 服务通信，获取该会议下全量的 Entity，然后 websocket 将这些 Entity 全部存储到 Redis 中，同时在内存中存储一份，它们是一次会议下的 meta 数据；同时，Websocket 服务会根据得到的 Entity 数据形成一份 View 数据，View 数据表示的是各个议程的统计信息，View 数据不需要持久化到 Redis 中；
+  \quad{}1. 当 WebSocket 的缓存 Redis 没有缓存会议任何数据时，WebSocket 首先要和 SpringBoot 服务通信，获取该会议下全量的 Entity，然后 WebSocket 将这些 Entity 全部存储到 Redis 中，同时在内存中存储一份，它们是一次会议下的 meta 数据；同时，WebSocket 服务会根据得到的 Entity 数据形成一份 View 数据，View 数据表示的是各个议程的统计信息，View 数据不需要持久化到 Redis 中；
   
-  \quad{}2. 对于一个债权人而言，假设此时一个债权人投了票，则投票的行为通过前端的 websocket 客户端发送到 websocket 服务，websocket 服务根据收到的投票行为首先更新 Redis 的内存，然后更新对应的内存 Entity 实例，然后将这次表决结果存储在一个 Dirty 中（Dirty 是一段时间内表决 Data 的集合），并更新 View 数据，流程如图~\ref{fig:wszqrlc}所示。
+  \quad{}2. 对于一个债权人而言，假设此时一个债权人投了票，则投票的行为通过前端的 WebSocket 客户端发送到 WebSocket 服务，WebSocket 服务根据收到的投票行为首先更新 Redis 的内存，然后更新对应的内存 Entity 实例，然后将这次表决结果存储在一个 Dirty 中（Dirty 是一段时间内表决 Data 的集合），并更新 View 数据，流程如图~\ref{fig:wszqrlc}所示。
 
   \begin{figure}[!htp]
       \centering
@@ -427,8 +550,8 @@ Message 的先后顺序能让聊天室快速构造 Base 推送。
       \label{fig:wszqrlc}
     \end{figure}
 
-  \quad{}3. 对于一个管理人而言，其在一开始就已经从 Springboot 拿到了所有 Entity，因此只需要接收变化的数据和统计信息：
+  \quad{}3. 对于一个管理人而言，其在一开始就已经从 SpringBoot 拿到了所有 Entity，因此只需要接收变化的数据和统计信息：
 
-  \quad{}\quad{}a. 在 websocket 链接第一次创建成功时，websocket 会向管理人推一次 Base 数据，Base 数据依托于 Entity 数据生成，只记录了投了票/参了会的人员；
+  \quad{}\quad{}a. 在 WebSocket 链接第一次创建成功时，WebSocket 会向管理人推一次 Base 数据，Base 数据依托于 Entity 数据生成，只记录了投了票/参了会的人员；
 
-  \quad{}\quad{}b. 链接创建成功后，websocket 会每隔一段时间（5秒）会检查 Dirty 的数据，如果 Dirty 数据不为空，则向管理人发送 View 和 Dirty 的数据，若中间有数据发送失败，则连接断开。
+  \quad{}\quad{}b. 链接创建成功后，WebSocket 会每隔一段时间（5秒）会检查 Dirty 的数据，如果 Dirty 数据不为空，则向管理人发送 View 和 Dirty 的数据，若中间有数据发送失败，则连接断开。
