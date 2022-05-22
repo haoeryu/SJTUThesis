@@ -5,7 +5,7 @@
 
 本会议系统的后端涉及到的角色有四种，一是运营人员，二是管理人，三是债权人，四是其他参会人员。涉及到的主要功能有会议基本信息的增删改查、会议的数据导入（包括表决数据导入和其他参会人员信息导入）、直播服务、实时聊天室、实时表决服务等。根据是否和实时性相关将本系统的后端主要分为两个部分，一是非实时服务部分的后端，实现为 SpringBoot 后端; 二是实时服务部分的后端，实现为 WebSocket 后端，后文将对两部分分开进行介绍。
 
-实时服务后端所用到的数据结构全部来自于 SpringBoot 后端，因此数据库设计仅展示 SpringBoot 后端的数据库设计。
+需要持久化到 Mongo 数据库的数据结构全部存在于 SpringBoot 后端，因此数据库设计仅展示 SpringBoot 后端的数据库设计。
 
 \section{数据库设计}
 如图~\ref{fig:meetingER}所示，整个系统的数据实体被划分为 Meeting, Schedule,
@@ -114,9 +114,8 @@ Group, Ticket, MeetingCreditor, ChatRoom 这 6 种类型的实体以满足需求
 \begin{figure}[!htp]
   \centering
   \includegraphics[width=12cm]{dataClassification.png}
-  \bicaption[数据分类]
+  \caption[数据分类]
     {数据类型分类示意图}
-    {Schematic diagram of data type classification}
  \label{fig:dataClassification}
 \end{figure}
 
@@ -145,15 +144,14 @@ Entity 为 Mongo 中存储的真实数据，实例会将其暂存于 Redis 中�
 \begin{figure}[!htp]
   \centering
   \includegraphics[width=12cm]{dataSave.png}
-  \bicaption[Entity存储示意]
+  \caption[Entity存储示意]
     {Entity存储示意图}
-    {Entity Storage Diagram}
  \label{fig:dataSave}
 \end{figure}
 
 不同类的业务数据存储形式不同。Entity 数据最终会持久化至 Mongo。Entity 被分散到三处。实例内存是 Redis 的 Cache，而 Redis 事实上是 Mongo 的 Cache。
 
-实例必须无状态，其状态必须可从 Redis 恢复。因此实例内存至 Redis 为 Write Through 策略。本⽂的第 5.2.2 节的实验已表明，3 个节点组成的单 Master 的 Mongo 集群仅⽀持 700+ 左右的 QPS，为性能瓶颈。因此 Redis 至 Mongo 为 Write Back 策略。如图~\ref{fig:dataSave}所示。
+实例必须无状态，其状态必须可从 Redis 恢复。因此实例内存至 Redis 为 Write Through 策略。本文的第 5.2.2 节的实验已表明，3 个节点组成的单 Master 的 Mongo 集群仅支持 700+ 左右的 QPS，为性能瓶颈，因此 Redis 至 Mongo 为 Write Back 策略。如图~\ref{fig:dataSave}所示。
 
 View 数据只保存在实例内存中。View 内部存储的同源数据事实上只是到某些 Entity 的映射（id、指针等）。View 内部存储的聚合数据是对应的聚合后的计算值。由于 View 内部存储的事实上只是 Entity 的映射，保证 View 的数据一致性的前提下提高了性能。
 
@@ -162,9 +160,8 @@ View 数据只保存在实例内存中。View 内部存储的同源数据事实�
 \begin{figure}[!htp]
   \centering
   \includegraphics[height=3cm]{dataPush.png}
-  \bicaption[推送方式]
+  \caption[推送方式]
     {推送方式示意图}
-    {Schematic diagram of push mode}
  \label{fig:dataPush}
 \end{figure}
 
@@ -188,22 +185,21 @@ View 数据的更新来源于 Patch 推送以及定时的 Entity 重新聚合计
 \begin{figure}[!htp]
   \centering
   \includegraphics[width=12cm]{createDataflow.png}
-  \bicaption[建立数据流]
+  \caption[建立数据流]
     {用户建立会话数据流示意图}
-    {Schematic diagram of user establishing session data flow}
  \label{fig:createDataflow}
 \end{figure}
 用户如果要与实例交互，必须先成功建立连接，然后建立会话。
 会话是否建立及会话是否存在的判定均以是否建立会话数据，是否存在会话数据为准。
-一个用户在同一时刻对一个实时服务只能有一个会话。
+一个用户在同一时刻对一个实时服务只能有一个会话。用户建立会话数据具体流程为：
 
 1. 客户端向 WebSocket 实例请求搭建连接，实例拿起该用户的会话并且建立锁，然后向 Redis 请求检查用户会话数据：
 
-\quad{}a. 如果已经存在会话数据，并且通过会话数据判定连接未关闭，则转至第 2 步解决异地登陆。
+\quad{}\quad{}a. 如果已经存在会话数据，并且通过会话数据判定连接未关闭，则转至第 2 步解决异地登陆。
 
-\quad{}b. 如果已经存在会话数据，并且通过会话数据判定连接已关闭，则转至第 4 步覆盖会话；
+\quad{}\quad{}b. 如果已经存在会话数据，并且通过会话数据判定连接已关闭，则转至第 4 步覆盖会话；
 
-\quad{}c. 如果检查发现不存在会话数据，则转至第 4 步建立会话；
+\quad{}\quad{}c. 如果检查发现不存在会话数据，则转至第 4 步建立会话；
 
 2. 实例发现异地登录请求，通过 Redis 中的连接，通知占用会话的用户异地登陆的异常；
 
@@ -218,20 +214,19 @@ View 数据的更新来源于 Patch 推送以及定时的 Entity 重新聚合计
 \begin{figure}[!htp]
   \centering
   \includegraphics[width=12cm]{requestDateflow.png}
-  \bicaption[请求数据流]
+  \caption[请求数据流]
     {用户请求数据流示意图}
-    {User request data flow diagram}
  \label{fig:requestDateflow}
 \end{figure}
 框架数据流整体过程如下：
 
 1. 客户端向 WebSocket 实例发送请求：
 
-\quad{}a. 如果 Redis 中已经缓存了相关数据，并且当前请求为读请求，则跳转至第 10 步；
+\quad{}\quad{}a. 如果 Redis 中已经缓存了相关数据，并且当前请求为读请求，则跳转至第 10 步；
 
-\quad{}b. 如果 Redis 中已经缓存了相关数据，并且当前请求为写请求，则跳转至第 2 步；
+\quad{}\quad{}b. 如果 Redis 中已经缓存了相关数据，并且当前请求为写请求，则跳转至第 2 步；
 
-\quad{}c. 如果 Redis 中没有相关数据的缓存数据，则直接跳转至第 4 步；
+\quad{}\quad{}c. 如果 Redis 中没有相关数据的缓存数据，则直接跳转至第 4 步；
 
 2. 根据写请求的具体要求，WebSocket 实例向 Redis 中写入/更新 Entity 和 View数据；
 
@@ -266,14 +261,7 @@ View 数据的更新来源于 Patch 推送以及定时的 Entity 重新聚合计
 
   \subsubsection{消息类型}
   Client 与 server 间通信只接受 JSON 格式的 “消息”。
-  消息分为多种类型，一种是请求型，一种是相应型，如图~\ref{fig:messageType}所示。
-  
-  \begin{figure}[!htp]
-    \centering
-    \includegraphics[height=2.5cm]{message.png}
-    \caption{消息类型}
-    \label{fig:messageType}
-  \end{figure}
+  消息分为多种类型，一种是请求型，一种是响应型。
 
   请求型消息，可由 client 或 server 发起，向对方请求内容或推送内容，格式如下方代码展示。
   {\setmainfont{Courier New Bold}
@@ -294,7 +282,7 @@ View 数据的更新来源于 Patch 推送以及定时的 Entity 重新聚合计
     {
         "t": "res",    // type
         "i": string,   // 所响应的请求型消息的 id
-        "s": number,   // HTTP 状态码，与 Restful 接口对齐，即可复用 Restful 接口的代码
+        "s": number,   // HTTP 状态码
         "d": object    // data
     }
   \end{lstlisting}}
@@ -303,9 +291,9 @@ View 数据的更新来源于 Patch 推送以及定时的 Entity 重新聚合计
   WebSocket 连接的每一进程都同为 server 和 client，且每一进程的所有消息同享一个入口。
 对于每一个 WebSocket 进程：
 
-\quad{}1. 作为 server 时会注册一系列方法，用于处理 d 字段的数据。
+1. 作为 server 时会注册一系列方法，用于处理 d 字段的数据。
 
-\quad{}2. 作为 client 时会发送一系列消息，并等待响应结果返回给上层。
+2. 作为 client 时会发送一系列消息，并等待响应结果返回给上层。
 
 两进程的通信如图~\ref{fig:wsConnect}所示,蓝色 server 和 client 为同一进程，而黄色为另一进程，它们互相通信。
 \begin{figure}[!htp]
@@ -317,21 +305,21 @@ View 数据的更新来源于 Patch 推送以及定时的 Entity 重新聚合计
 
 白色数字标识 server 服务流程：
 
-\quad{}1. 服务端收到信息，检测 t 字段为 req，即为请求；
+1. 服务端收到信息，检测 t 字段为 req，即为请求；
 
-\quad{}2. 根据信息 h 字段，寻找对应的 handler 以处理 d 字段中的数据；
+2. 根据信息 h 字段，寻找对应的 handler 以处理 d 字段中的数据；
 
-\quad{}3. Handler 返回请求结果。注意，若未找到 handler，则用默认 handler，返回错误信息；
+3. Handler 返回请求结果。注意，若未找到 handler，则用默认 handler，返回错误信息；
 
-\quad{}4. 使用本实例的 client，向黄色进程发送返回结果，流程结束；
+4. 使用本实例的 client，向黄色进程发送返回结果，流程结束；
 
 绿色数字标识 client 需要 server 响应的请求流程：
 
-\quad{}1. client 发送请求消息。上下文进入等待状态。若超时后则 abort（非幂等请求除外）；
+1. client 发送请求消息。上下文进入等待状态。若超时后则 abort（非幂等请求除外）；
 
-\quad{}2. 进程执行上文 server 相同流程。流程结束后，本进程收到对应请求的响应消息；
+2. 进程执行上文 server 相同流程。流程结束后，本进程收到对应请求的响应消息；
 
-\quad{}3. 将响应消息填充向处于等待状态中的请求上下文，结束等待。
+3. 将响应消息填充向处于等待状态中的请求上下文，结束等待。
 
 对于不需要 server 响应的 client，其发送的请求中 i 字段为 0。
 
@@ -376,6 +364,12 @@ JavaScript 端代码完全用 class 实现，与 React 交互时会产生函数�
 实时聊天室不同于表决服务，每位用户在聊天室中所见的消息是增量的，每份 View 的内容都是增量的，并且每个人的 View 又很可能重叠。这会导致大量计算开销。
 
 \subsubsection{优化设计}
+\begin{figure}[!htp]
+  \centering
+  \includegraphics[height=7.5cm]{wsChatRoom.png}
+  \caption{聊天室优化方案}
+  \label{fig:wsChatRoom}
+\end{figure}
 考虑到聊天室数据的本质是一个只读的，持续增长的消息序列并且聊天室并不存在聚合数据，只有同源数据，不需要定时的重新聚合计算任务。
 因此，对连接上同一个聊天室的每个用户而言，可以认为所有人共享一个 View，其内部包括所有人发送的所有信息，只不过在 Base 请求时每个人可见的内容不同。
 
@@ -385,113 +379,14 @@ Message 的先后顺序能让聊天室快速构造 Base 推送。
 只有用户知晓其接受到了多少 Message，只需定时告知聊天室，即可反推出所缺失的 Message。
 用户请求包括两个字段，自己的最新 Message 索引号，以及自己的已知缺失 Message 数组。
 聊天室的响应即 Base，包括用户的已知缺失的，以及用户最新至聊天室最新之间的 Message，如图~\ref{fig:wsChatRoom}所示。
-\begin{figure}[!htp]
-    \centering
-    \includegraphics[height=7.5cm]{wsChatRoom.png}
-    \caption{聊天室优化方案}
-    \label{fig:wsChatRoom}
-  \end{figure}
 
-  \subsubsection{重要接口实现}
-  本小节展示了聊天室服务一些重要接口的参数和响应，包括会话握手请求，生成 Base 推送，下载聊天记录，发送新消息，封禁和解禁用户，强制用户下线，接受消息推送，接受 ban 推送等。参数和响应若未列出则默认为 null。
-
-  1. Handshake：会话握手请求
-
-  仅限用户发向实例。
-  此接口是聊天室服务的基础，用户在使用聊天室服务时，必须在用户握手成功，建立起会话数据后，服务端才会处理用户发来的请求。
-
-  注意，每个用户同一时间不能在多地登陆，如果该用户已经建立了会话数据后，出现异地登录的情况，则强制原先建立的会话下线。
-
-  {\setmainfont{Courier New Bold}
-  \begin{lstlisting}
-    // 参数：
-    {
-        "userId": number,
-        "chatroomId": number,
-        "userType": string, // 用户类型，只接受 PRACTITIONER 和 CREDITOR
-        "userName": string
-    }
-   \end{lstlisting}}
-
-   2. GenerateBase：生成 Base 推送
-
-   仅限用户发向实例。
-   实例通过遍历存储消息的 View，返回该用户可见的消息。
-
-   {\setmainfont{Courier New Bold}
-   \begin{lstlisting}
-    // 参数：
-    {
-        "missingMsgIds": number[], // 用户已知的缺失的消息 index
-        "newestIndex": number // 用户目前收到的最新的消息 index
-    }
-    // 响应：
-    {
-        "bannedUsers": number[], // 该用户可见的当前被 ban 的用户 id 列表；管理人可见所有人，债权人只可见自己
-        "messages": Message[]
-    }
-    \end{lstlisting}}
-
-     3. NewMessage：发送新消息
-
-     仅限用户发向实例。
-     仅在用户未被 ban 且聊天室未关闭时可用。
-     在 View 数组放置一个空消息，放锁，然后将消息存入 Reids。
-     操作成功后，该消息会存入 View 数组中对应的空消息处，并引发一次 patch 推送。
-  
-     {\setmainfont{Courier New Bold}
-     \begin{lstlisting}
-        // 参数
-        Message
-        // 响应
-        {
-            "index": number // 所发送的消息在 View 的消息数组中的 index
-        }
-      \end{lstlisting}}
-
-      4. Ban：封禁 / 解禁用户
-
-      仅限用户发向实例。此接口仅聊天室未关闭时可用且仅限管理人可用。通过此接口管理员可以对聊天室内的债权人用户进行封禁和解禁操作，此接口不可封禁管理人。
-
-      {\setmainfont{Courier New Bold}
-      \begin{lstlisting}
-        // 参数
-        {
-            "userId": number,
-            "ban": bool // 指明该用户是否被 ban
-        }
-       \end{lstlisting}}
-
-       5. ForceOffline：强制用户下线
-
-       仅限实例发向用户。
-       聊天室服务不允许同时多地登录，如果用户建立会话时，发现本聊天室已有该用户的会话，则实例会发送给被顶替用户异地登录者的IP和登录时间，并在两秒内关闭原有会话连接。此接口无需响应。
-
-      {\setmainfont{Courier New Bold}
-      \begin{lstlisting}
-        // 参数
-        {
-            "time": number, // 异地登录者的登录时间
-            "ip": string // 异地登录者的登录 IP
-        }
-       \end{lstlisting}}
-
-       6. patchMessage：用户接受消息推送
-
-       仅限实例发向用户。
-       在用户发送新消息，并成功在消息 View 中保存后，对应的消息会 Patch 推送给发送者和接受者。此接口无需响应。
-      {\setmainfont{Courier New Bold}
-      \begin{lstlisting}
-        // 参数
-        Message
-       \end{lstlisting}}
 
   \subsubsection{交互设计}
   考虑到所有用户共享一个 View，其包括所有用户的聊天发言和封禁状态，因此每个用户在前端也维护类似这样的数据结构。具体地，前端维护：
 
-  \quad{}1. messages 数组
+  1. messages 数组，用于存放所有对该用户可见的消息，消息按序排列，该消息为 null 意为该消息对该用户不可见，该消息为 undefined 意为该消息缺失。
 
-  \quad{}2. bannedUsers 数组
+  2. bannedUsers 数组，用于存放被禁止的用户的 Id，对于管理人来说此数组包括所有被禁止的债权人用户 Id，对债权人来说此数组包含自身 Id 或 为空。
 
 对于一个用户来说，其不清楚不可见的信息是由于网络延迟未收到还是由于自己不可见。
 
@@ -507,7 +402,7 @@ Message 的先后顺序能让聊天室快速构造 Base 推送。
 \subsection{实时表决服务}
 
 \subsubsection{实时表决服务流程设计}
-以管理人为例，实时表决服务流程如图~\ref{fig:wsbjlc}所示。
+以管理人为例，实时表决服务流程如图~\ref{fig:wsbjlc}所示，具体流程如下：
 
 \begin{figure}[!htp]
     \centering
@@ -516,42 +411,45 @@ Message 的先后顺序能让聊天室快速构造 Base 推送。
     \label{fig:wsbjlc}
   \end{figure}
 
-  \quad{}1. 管理人进入会议界面，前端向 SpringBoot 后端发送请求；
+  1. 管理人进入会议界面，通过前端界面交互向 SpringBoot 后端发送请求；
 
-  \quad{}2. 后端返回统计数据给前端，前端收到请求后将数据在前端渲染，生成视图,前端接收到数据后需要将数据持久化到客户端上，从而减少后端每次计算全量数据的压力。为了明确前端数据是否需要被更新，后端数据应当给统计数据维护一个类似版本号的字段，若发现版本号变更，则更新数据，重新从 SpringBoot 拉取一遍全量数据；
+ 2. 后端返回统计数据给前端，前端收到请求后将数据在前端渲染，生成视图,前端接收到数据后需要将数据持久化到客户端上，从而减少后端每次计算全量数据的压力。为了明确前端数据是否需要被更新，后端数据应当给统计数据维护一个类似版本号的字段，若发现版本号变更，则更新数据，重新从 SpringBoot 拉取一遍全量数据；
 
-  \quad{}3. 前端询问会议是否已结束；
+3. 拉取全量数据后，前端向后端发送请求询问会议是否已结束；
 
-  \quad{}4. SpringBoot 返回会议结束标识，若：
+4. SpringBoot 返回会议结束标识，根据会议结束标识出现如下两种情况：
 
-  \quad{}\quad{}a. 会议已结束，该流程结束；
+  \quad{}\quad{}a. 结束标识会议已结束，该会议所有数据已在第 2 步全部获取，该流程结束；
   
-  \quad{}\quad{}b. 会议未结束，进入第 5 步；
+  \quad{}\quad{}b. 结束标识会议未结束，第 2 步获取的数据仅作为基础数据，进入第 5 步；
   
-  \quad{}5. 会议未结束，则管理人和后端建立 WebSocket 链接，等待数据推送；
+5. 会议未结束，则后续数据由管理人和实时后端建立 WebSocket 链接，等待数据推送；
   
-  \quad{}6. WebSocket 获取会议相关 Entity，数据不存在，向 SpringBoot 发起数据请求,只有 WebSocket 本地没有缓存全量 Entity 时才会向 SpringBoot 返回全量的数据，其他时候直接依据内存 / Redis 返回的缓存计算结果；
+6. WebSocket 获取会议相关 Entity，数据不存在，向 SpringBoot 发起数据请求,只有 WebSocket 本地没有缓存全量 Entity 时才会向 SpringBoot 返回全量的数据，其他时候直接依据内存 / Redis 返回的缓存计算结果；
   
-  \quad{}7. SpringBoot 返回所有的 Entity，WebSocket 将其缓存在 Redis 中，并缓存在内存中；
+7. SpringBoot 返回所有的 Entity，WebSocket 将其缓存在 Redis 中，并缓存在内存中；
   
-  \quad{}8. WebSocket 根据实际情况实时推送数据到前端，前端依据 WebSocket 推的数据进行更新，WebSocket 不会返回给前端全量的数据，而是一个数据片段，包含各个议题的表决情况、参会人数情况和被更新的数据（比如某自然人就议题 A 提了同意票）。
+8. WebSocket 根据实际情况实时推送数据到前端，前端依据 WebSocket 推的数据进行更新，WebSocket 不会返回给前端全量的数据，而是一个数据片段，包含各个议题的表决情况、参会人数情况和被更新的数据（比如某自然人就议题 A 提了同意票）。
 
   \subsubsection{实时表决服务内部数据流和控制流流转}
+  \begin{figure}[!htp]
+    \centering
+    \includegraphics[height=8cm, width=12cm]{wszqrlc.png}
+    \caption{债权人投票流程示意图}
+    \label{fig:wszqrlc}
+  \end{figure}
+
   WebSocket 会在下列场合和 SpringBoot 的 meeting 服务、前端（债权人端和管理人端）以及 Redis 服务进行通信：
 
-  \quad{}1. 当 WebSocket 的缓存 Redis 没有缓存会议任何数据时，WebSocket 首先要和 SpringBoot 服务通信，获取该会议下全量的 Entity，然后 WebSocket 将这些 Entity 全部存储到 Redis 中，同时在内存中存储一份，它们是一次会议下的 meta 数据；同时，WebSocket 服务会根据得到的 Entity 数据形成一份 View 数据，View 数据表示的是各个议程的统计信息，View 数据不需要持久化到 Redis 中；
+  1. 当 WebSocket 的缓存 Redis 没有缓存会议任何数据时，WebSocket 首先要和 SpringBoot 服务通信，获取该会议下全量的 Entity，然后 WebSocket 将这些 Entity 全部存储到 Redis 中，同时在内存中存储一份，它们是一次会议下的 meta 数据；同时，WebSocket 服务会根据得到的 Entity 数据形成一份 View 数据，View 数据表示的是各个议程的统计信息，View 数据不需要持久化到 Redis 中；
   
-  \quad{}2. 对于一个债权人而言，假设此时一个债权人投了票，则投票的行为通过前端的 WebSocket 客户端发送到 WebSocket 服务，WebSocket 服务根据收到的投票行为首先更新 Redis 的内存，然后更新对应的内存 Entity 实例，然后将这次表决结果存储在一个 Dirty 中（Dirty 是一段时间内表决 Data 的集合），并更新 View 数据，流程如图~\ref{fig:wszqrlc}所示。
+  2. 对于一个债权人而言，假设此时一个债权人投了票，则投票的行为通过前端的 WebSocket 客户端发送到 WebSocket 服务，WebSocket 服务根据收到的投票行为首先更新 Redis 的内存，然后更新对应的内存 Entity 实例，然后将这次表决结果存储在一个 Dirty 中（Dirty 是一段时间内表决 Data 的集合），并更新 View 数据，流程如图~\ref{fig:wszqrlc}所示。
 
-  \begin{figure}[!htp]
-      \centering
-      \includegraphics[height=8cm, width=12cm]{wszqrlc.png}
-      \caption{债权人投票流程示意图}
-      \label{fig:wszqrlc}
-    \end{figure}
-
-  \quad{}3. 对于一个管理人而言，其在一开始就已经从 SpringBoot 拿到了所有 Entity，因此只需要接收变化的数据和统计信息：
+  3. 对于一个管理人而言，其在一开始就已经从 SpringBoot 拿到了所有 Entity，因此只需要接收变化的数据和统计信息：
 
   \quad{}\quad{}a. 在 WebSocket 链接第一次创建成功时，WebSocket 会向管理人推一次 Base 数据，Base 数据依托于 Entity 数据生成，只记录了投了票/参了会的人员；
 
   \quad{}\quad{}b. 链接创建成功后，WebSocket 会每隔一段时间（5秒）会检查 Dirty 的数据，如果 Dirty 数据不为空，则向管理人发送 View 和 Dirty 的数据，若中间有数据发送失败，则连接断开。
+
+  \section{本章小结}
+  本章介绍了本系统后端部分的具体设计。本章先介绍了本系统的数据库设计，给出了会议系统数据的 ER 图，并进行了说明。然后根据实时性，本章将后端分为实时后端和非实时后端两部分。对于非实时后端，详细介绍了在原系统功能基础上修改和新增的功能的实现设计。对于实时后端，首先介绍了实时后端的数据分类、存储、推送、更新和数据流设计，然后对 WebSocket 的业务通信协议设计做出了说明，最后对实时聊天服务和实时表决服务的详细设计做出了说明。

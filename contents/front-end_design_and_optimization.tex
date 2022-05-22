@@ -1,15 +1,7 @@
 % !TeX root = ../main.tex
 
 \chapter{系统前端设计与优化}
-本章节主要介绍对本系统前端采用的特殊设计以及采用的原因及实现。
-
-在本章中将会介绍两个特殊的设计：
-
-1. 系统前端包含一个数据库
-
-2. 系统前端提出了一层新抽象：表决计算精度
-
-下面将详细讲解采用此类设计的原因及实现。
+本章节主要介绍对本系统前端相关的设计以及设计的原因和相关实现。在实现过程中有两个较为特殊的问题，一是对于管理人来说，前端已有全量的数据，计算表决结果所需的数据在前端全部都已存在，在前端进行计算的开销很少，并不需要向后端发送请求，因此将表决计算放在前端进行，为此前端设计了存储数据的前端数据库。二是由于前端不同表决类型议程的渲染逻辑区分复杂，为了解决此问题，在前端提出了一层新的抽象：表决计算精度。另外本章还介绍了前端 Redux 中的数据结构和前端实现过程中遇到的一些其他问题，下面将进行详细地介绍。
 
 \section{前端数据库}
 
@@ -63,8 +55,6 @@ O(M) 的时间复杂度似乎能满足要求，但实际上 Object 每次的 O(1
   // 初始化一个 map, key 是 scheduleId, value 是 ReduxSchedule 实体
   const scheduleMap: Map<number, ReduxSchedule> = new Map()
   scheduleMap.set(12, '对应的 schedule 实体')
-  console.log(scheduleMap.get(12))
-  // 打印结果：'对应的 schedule 实体'
  \end{lstlisting}}
 
   使用 Map 进行存储解决了查询和更新的性能问题, 但是在使用 Map 的过程中，发现了另一个问题，满足渲染要求带来的性能损耗过大。
@@ -142,29 +132,16 @@ Immutable 中文意义为不可变的，Immutable Data 就是一旦创建，就�
 
   前端 Redux 通过使用 ImmutableMap，将 Redux 实现成了一个数据库，只要 Redux ImmutableMap 发生了变更，前端就触发使用该 ImmutableMap 的组件的渲染。
 
-  \subsection{其他问题}
-  在将前端 Redux 实现为一个数据库的过程中，还有一些问题凸显了出来，这里介绍两个本系统的重要问题及解决方法或思路。
+  在本系统设计中，使用 Immutable.Js 只是借助其Structural Sharing（结构共享）的能力减少渲染带来的损耗。而一旦将 Immutable.js 的数据结构作为业务数据，项目代码的可复用性就会变得非常差，并且无论之后进行前端做优化还是计算向后端迁移，项目代码都会变得非常难维护。在设计中ImmutableMap 只是起到像数据库一样的查询作用，所以本次设计尽量缩短了 Immutable.js 库的使用范围，仅在和表决计算相关的数据结构中使用，避免在业务逻辑用到的数据结构中使用 Immutable.js 的数据结构。这样的设计解决了前端渲染的性能损耗的问题，但是即使缩减了使用范围，仍然对本系统前端代码可维护性造成了一定影响。
 
-  第一个问题是在将前端 Redux 实现为数据库的过程中，由于各个数据之间存在有关系，例如议程 Schedule 有对应的表决组 Groups，表决Ticket 有对应的会议债权人 MeetingCreditor，这之间的对应关系的存储问题。
+  \subsection{其他问题}
+  在将前端 Redux 实现为一个数据库的过程中，还有一些问题凸显了出来，这里介绍一个本系统的重要问题及解决方法或思路。
+
+  在将前端 Redux 实现为数据库的过程中，由于各个数据之间存在有关系，例如议程 Schedule 有对应的表决组 Groups，表决Ticket 有对应的会议债权人 MeetingCreditor，这之间的对应关系的存储问题。
 
   目前的设计实现是实体与另一类实体的关系用外键存储，原因是只有这样才能正确触发渲染。假设在Redux数据库存储的议程实体 Schedule 中，groups 字段是一个数组，它保存了和 Schedule 相关的表决组。
   如果存的是表决组 Object ，那么表决组 Map 发生改变后，由于 groups 数组没有发生改变，用到 groups 字段的组件就无法触发渲染。
   如果存的是表决组外键，那么表决组 Map 发生改变后，由于用到 groups 数组的组件一定会用到表决组 Map，那么用到 groups 字段的组件就能正常触发渲染。
-
-  第二个问题Immutable.js 官方并不建议混用 Immutable.js 和原生 JS 对象，但是在本系统的 Redux 中混用了，采取混用方案的原因有如下两点：
-
-  \quad{}a. Immutable.js 具有侵入性，官方要求为避免混淆，所有 Object 要么全用原生 JS 要么全用 Immutable.js，如果要在 Redux 中全套换用 Immutable.js，必须将 Redux 中的 combineReducer 组件全量替换，这就会和 Storage Middleware (存储中间件) 不兼容，导致所有其他用到 Redux 的组件都会出现问题，例如设置鉴权的 token header。
-
-
-  \quad{}b. 在本系统设计中，使用 Immutable.Js 只是借用其高性能的 ImmutableMap 的能力。而一旦将 Immutable.js 的数据结构作为业务数据，项目代码的可复用性就会变得非常差，并且无论之后进行前端做优化还是计算向后端迁移，项目代码都会变得非常难维护。在设计中ImmutableMap 只是起到像数据库一样的查询作用，所以本次设计尽量缩短 Immutable.js 库的使用范围，避免在业务逻辑用到的数据结构中使用 Immutable.js 的数据结构。
-
-  另外前端的计算工作并不是全写死的，本系统的优化方向可以分为两类：
-
-  \quad{}a. 前端进行优化，提升 QPS 至万级别。
-
-  \quad{}b. 前端的计算向后端迁移。
-
-  无论进行哪种优化，都能解决掉 Immutable.js 所解决的“渲染不触发”的问题，完成两种优化中任一种都可以在之后将 Immutable.js 去掉。
 
   \section{表决计算精度}
   \subsection{什么是表决计算精度}
@@ -179,32 +156,26 @@ Immutable 中文意义为不可变的，Immutable Data 就是一旦创建，就�
 
   \subsection{为什么需要表决计算精度}
 
-  首先，因为项目现在表决类型是Hard Code (硬编码),并不是一个变量。如果这部分的业务需求发生了变化，本系统的整个架构设计从持久层，到后端，到实时表决端，再到前端，以及接口端全部都得重修修正。一个直观的例子，由于只有重整表决需要计算到表决组级别的特殊性，本系统现有接口的命名区分为 noReorgnization (非重整表决)，reorgnization (重整表决)，如果新增一个议题，表决计票方式同重整表决，但命名叫新式表决，那么原本的命名 noReorgnization，reorgnization 需要改成 noReorgnizationAndNew (非重整和新式表决)， reorgnizationAndNew (重整和新式表决)，以及其他相关的部分全部都需要修正。如果通过表决精度来进行区分，之后的修正只需要在前端只需要加个枚举常量就可以解决问题。
+  首先，因为项目现在表决类型是硬编码,并不是一个变量。如果这部分的业务需求发生了变化，本系统的整个架构设计从持久层，到后端，到实时表决端，再到前端，以及接口端全部都得重修修正。一个直观的例子，由于只有重整表决需要计算到表决组级别的特殊性，本系统现有接口的命名区分为 noReorgnization (非重整表决)，reorgnization (重整表决)，如果新增一个议题，表决计票方式同重整表决，但命名叫新式表决，那么原本的命名 noReorgnization，reorgnization 需要改成 noReorgnizationAndNew (非重整和新式表决)， reorgnizationAndNew (重整和新式表决)，以及其他相关的部分全部都需要修正。如果通过表决精度来进行区分，之后的修正只需要在前端只需要加个枚举常量就可以解决问题。
 
   其次表决计算精度决定了前端的渲染，有了表决精度的划分，前端渲染的代码逻辑会更加清晰。例如，债权人的投票表格中，不同表决精度的议程，投票表格的行单元格合并是不同的；管理人查看表决数据统计的时候，不同表决精度的议程，表决数据统计的行单元格合并是不同的；管理人查看表决详情时，不同表决精度的议程对应的表决详情是完全不同的两张表。
-  
-  以管理人查看表决详情为例，从业务逻辑出发，
-  高精度议程表决详情的每一行，是选中表决组下的一个表决项 Ticket，如图~\ref{fig:reAndNoRe}(a)中第一行代表债权人上海启岚石油制品有限公司在审议A议程下普通债权中的表决金额为49349400.00元。
-  低精度议程表决详情的每一行，是该议程下的一个会议债权人 MeetingCreditor，如图~\ref{fig:reAndNoRe}(b)中第一行代表债权人上海启岚石油制品有限公司在审议A议程下总共的表决金额为49349400.00元。
-
   \begin{figure}[!htp]
     \centering
-    \begin{subfigure}{1\textwidth}
-      \centering
-      \includegraphics[height=6cm]{re.png}
-      \caption{高精度议程表决详情}
-    \end{subfigure}
-    \hspace{1cm}
-    \begin{subfigure}{1\textwidth}
-      \centering
-      \includegraphics[height=6cm]{noRe.png}
-      \caption{低精度议程表决详情}
-    \end{subfigure}
-    \caption{高精度和低精度对比图}
-    \label{fig:reAndNoRe}
+    \includegraphics[height=6cm]{re.png}
+    \caption{高精度议程表决详情}
+    \label{fig:reo}
   \end{figure}
+  \begin{figure}[!htp]
+    \centering
+    \includegraphics[height=6cm]{noRe.png}
+    \caption{低精度议程表决详情}
+    \label{fig:noReo}
+  \end{figure}
+  以管理人查看表决详情为例，从业务逻辑出发，
+  高精度议程表决详情的每一行，是选中表决组下的一个表决项 Ticket，如图~\ref{fig:reo}中第一行代表债权人上海启岚石油制品有限公司在审议A议程下普通债权中的表决金额为49349400.00元。
+  低精度议程表决详情的每一行，是该议程下的一个会议债权人 MeetingCreditor，如图~\ref{fig:noReo}中第一行代表债权人上海启岚石油制品有限公司在审议A议程下总共的表决金额为49349400.00元。
 
-  总的来说，表决计算精度的提出，一是让业务代码可维护性变强了；
+  总的来说，表决计算精度的提出，一是让业务代码可维护性变强了。
   二是让前端渲染逻辑更加清晰了。
 
   \section{Redux中的数据结构}
@@ -302,3 +273,6 @@ Immutable 中文意义为不可变的，Immutable Data 就是一旦创建，就�
 对于实时表决时期，real state 只在第一次 action 触发时向 SpringBoot 后端获取数据，接下来这些 real state 都会接受实时数据的更新，
 
 对于非实时表决时期，所有的 action 都将被设定为跳过从实时表决后端获取实时数据，直接从 SpringBoot 后端获取数据。
+
+\section{本章小结}
+本章首先介绍了前端两个重要的特殊设计。一是因为在管理人部分系统前端已有全量的数据存在，对于表决结果的计算放在前端会更快捷，也可以减少后端的压力。因此在前端维护了一套数据库，用与存储会议相关的全量数据和进行表决结果计算。第一小节具体介绍了前端数据库的设计。二是由于前端不同表决类型议程的渲染逻辑区分复杂，为了使渲染代码逻辑更加清晰，在前端提出了一层新的抽象：表决计算精度，通过加入表决计算精度，使业务代码可维护性变强了，也使得前端渲染逻辑更加清晰。另外，本章第三小节详细介绍了前端在上述两个特殊设计的情况下，Redux 中相关的数据结构设计。最后本章介绍了在前端设计中遇到的一些其他问题以及解决方法。
