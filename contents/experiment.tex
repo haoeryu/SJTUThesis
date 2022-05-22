@@ -46,18 +46,57 @@
     \label{fig:test3}
   \end{figure}
 
-  为了测试前端在使用了 immutable.js 的 Map 进行数据存储后，在 10000 条数据的情况下平均每条数据的更新渲染所需时间，在测试页面输入数据长度为 10000，点击生成数据并点击开始更新，等待一段时间后点击报告现状，得到平均更新所需时间如如图~\ref{fig:test4}，在表格 10000 条数据的情况下，平均更新每条信息所花费的时间为 18.73 ms，可以满足需求。
+  为了测试前端在使用了 immutable.js 的 Map 进行数据存储后，在 100000 条数据的情况下平均每条数据的更新渲染所需时间，在测试页面输入数据长度为 100000，点击生成数据并点击开始更新，等待一段时间后点击报告现状，得到平均更新所需时间如如图~\ref{fig:test4}，在表格 100000 条数据的情况下，平均更新每条信息所花费的时间为 0.13 ms，即在前端组件中更新 10000 条数据并渲染总共仅需 1.3 s，可以满足业务的需求。
 
   \begin{figure}[!htp]
     \centering
-    \includegraphics[height=2cm]{test4.png}
+    \includegraphics[height=1.5cm]{test4.png}
     \caption{前端测试结果}
     \label{fig:test4}
   \end{figure}
 
   \subsection{系统测试}
-  \subsubsection{Mongo 写入性能测试}
-  本文使用 Jmeter 测试工具进行了性能测试，测试了 Mongo 集群的写入性能。创建一个测试接口，此测试接口仅含有一次写入 Mongo 操作，通过 Jmeter 测试工具提升并发量，查看平均响应时间和 P95 响应时间，表~\ref{fig:test5}是我们进行测试的结果。根据性能测试的结果，可以推算出 Mongo 仅支持 700+ QPS，在高并发系统中明显为性能瓶颈。
+  \begin{figure}[!htp]
+    \centering
+    \begin{subfigure}{0.56\textwidth}
+      \centering
+      \includegraphics[height=6cm,width=8.1cm]{testEnv1.png}
+      \caption{}
+    \end{subfigure}
+    \begin{subfigure}{0.43\textwidth}
+      \centering
+      \includegraphics[height=6cm,width=5.7cm]{testEnv2.png}
+      \caption{}
+    \end{subfigure}
+    \caption{测试环境参数}
+    \label{fig:testEnv}
+  \end{figure}
+  进行系统测试的测试环境参数如图~\ref{fig:testEnv}所示。在此环境下测试 10 万并发量级别下从发送到实时服务到持久化到 Mongo 数据库中总的耗时。通过记录消息达到实时服务的时间，准备生产消息的时间，完成消费消息的时间，准备存入 Mongo 数据库的时间作为数据存入 Mongo 数据库中(此处不使用 Redis 集群作为缓存)，成功存入后记录完成存入 Mongo 数据库的时间并记录到日志文件中。通过记录数据计算请求在本系统中平均响应时间，Kafka 平均响应时间及 Mongo 数据库平均写入时间，结果如表~\ref{fig:test7}。
+
+  \begin{table}[h!]
+    \begin{center}
+      \caption{系统测试}
+      \label{fig:test7}
+      \begin{tabular}{ c c c c }
+        \hline
+        \textbf{并发量} & \textbf{平均响应时间（ms）
+        } & \textbf{Kafka 平均响应时间（ms）
+        } & \textbf{Mongo 平均写入耗时（ms）
+        } \\
+        \hline
+        100000 & 4312 & 261 & 4043 \\
+        \hline
+      \end{tabular}
+    \end{center}
+  \end{table}
+
+  根据实验结果，系统在 10 万并发量下平均一次响应所需时间为 4312 ms，其中 Kafka 的平均响应时间为 261 ms，占总时间的 6\%，Mongo 写入的平均时间为 4043 ms，占总时间的 93.8\%，明显 Mongo 的写入性能为系统的性能瓶颈，除开 Mongo 写入消耗的时间后，系统延迟并不高。
+
+  本视频表决会议系统作为高并发系统，可能存在短时间内请求过多使服务器服务宕机
+的情况，可能出现高并发情况的功能有实时表决和实时聊天，如果在短时间内大量债权人同
+时投票则实时表决会在短时间内出现大量请求，实时聊天同理因此增加了 Kafka 集群用作流量削峰，防止系统由于请求压力过大崩溃。通过前面的实验探知本系统的性能瓶颈为 Mongo 写入性能，下面我们对 Mongo 的本系统写入性能进行实际测试。
+
+本文使用 Jmeter 测试工具对 Mongo 写入性能进行了测试，测试了 Mongo 集群的写入性能。创建一个测试接口，此测试接口仅含有一次写入 Mongo 操作，通过 Jmeter 测试工具提升并发量，查看平均响应时间和 P95 响应时间，表~\ref{fig:test5}是我们进行测试的结果，根据性能测试的结果，可以推算出 Mongo 仅支持 700+ QPS。
   \begin{table}[h!]
     \begin{center}
       \caption{Mongo 写入性能测试}
@@ -84,30 +123,5 @@
     \end{center}
   \end{table}
 
-  \subsubsection{Kafka 订阅发布性能测试}
-  本视频表决会议系统作为高并发系统，可能存在短时间内请求过多使服务器服务宕机的情况，可能出现高并发情况的功能有实时表决和实时聊天，如果在短时间内大量债权人同时投票则实时表决会在短时间内出现大量请求，实时聊天同理，由于并发都是针对于实时性的功能，性能瓶颈需要考虑实时 WebScoket 端性能和 Mongo 的写入性能，而前面测试得到 Mongo 的写入性能无法满足系统的要求，为系统的性能瓶颈，仅仅通过增加服务实例的方式无法解决请求过多的情况，因此在 WebSocket端还需要进行流量削峰，本系统使用消息中间件 Kafka 达到流量削峰的目的，本节将测试 Kafka 订阅发布的性能，来确认 Kafka 的性能是否满足要求，是否会成为系统的性能瓶颈。
-
-  测试在 100 个分区，1 个订阅的情况下测试订阅发布的延迟，结果表~\ref{fig:test6}，所示。当ack=1，消息被追加到leader副本所在分区后再确认，当ack=all，在所有的ISR(同步副本)都接收到消息时才确认，在这两种情况下，平均响应时间为 4+ ms，能够满足系统需求。
-
-  通过对 Mongo 写入性能的测试和对 Kafka 订阅发布性能的测试结果进行对比后发现，可以确定本系统性能瓶颈为 Mongo 写入性能，因此后续出现性能瓶颈时需要考虑对系统 Mongo 的写入性能进行优化。
-
-  \begin{table}[h!]
-    \begin{center}
-      \caption{系统功能性测试结果}
-      \label{fig:test6}
-      \begin{tabular}{ c c c c }
-        \hline
-        \textbf{类型} & \textbf{平均响应时间（ms）
-        } & \textbf{P90值（ms）
-        } & \textbf{P99值（ms）
-        } \\
-        \hline
-        Kafka-ack-1 & 4.26 & 5.39 & 6.94 \\
-        Kafka-ack-all & 4.22 & 5.19 & 10.43 \\
-        \hline
-      \end{tabular}
-    \end{center}
-  \end{table}
-
   \section{本章小结}
-  本章介绍了本系统的相关实验设计。首先介绍了本系统的功能性测试，通过多轮功能性测试和优化，保证了本系统在功能性上的正确性。然后对系统性能进行了测试，并分别测试了 Mongo 写入性能和 Kafka 的订阅发布性能，确定系统的性能瓶颈在 Mongo 写入性能的限制上。
+  本章介绍了本系统的相关实验设计。首先介绍了本系统的功能性测试，通过多轮功能性测试和优化，保证了本系统在功能性上的正确性。然后对系统性能进行了测试，确认了系统的性能瓶颈为 Mongo 写入性能，然后对本系统的 Mongo 写入性能进行了测试。
