@@ -1,6 +1,6 @@
 % !TeX root = ../main.tex
 
-\chapter{系统实时后端设计与实现}
+\chapter{实时后端设计与实现}
 本章节主要介绍系统实时后端针对不同业务做出的设计，包括功能设计优化和实现。
 实时后端包含了所以具有实时性的服务，包括聊天室服务和实时表决服务。WebSocket后端使用Golang实现。
 
@@ -45,17 +45,7 @@ Entity 为 Mongo 中存储的真实数据，实例会将其暂存于 Redis 中�
 
 \subsection{数据存储}
 
-\begin{figure}[!htp]
-  \centering
-  \includegraphics[width=12cm]{dataSave.png}
-  \caption[Entity存储示意]
-    {Entity存储示意图}
- \label{fig:dataSave}
-\end{figure}
-
-不同类的业务数据存储形式不同。Entity 数据最终会持久化至 Mongo。Entity 被分散到三处。实例内存是 Redis 的 Cache，而 Redis 事实上是 Mongo 的 Cache。
-
-实例必须无状态，其状态必须可从 Redis 恢复。因此实例内存至 Redis 为 Write Through 策略。本文的第 5.2.2 节的实验已表明，3 个节点组成的单 Master 的 Mongo 集群仅支持 700+ 左右的 QPS，为性能瓶颈，因此 Redis 至 Mongo 为 Write Back 策略。如图~\ref{fig:dataSave}所示。
+架构一节中提到，对于债权人会议系统来说，实时服务实际上仅在开会期间存在。本文的第 5.2.2 节的实验已表明，3 个节点组成的单 Master 的 Mongo 集群仅支持 700+ 左右的 QPS，为性能瓶颈，因此在会议开始时，会将本会议相关数据存入 Redis 集群，会议进行期间 Entity 的读取直接从 Redis 集群中读取，而更新则先更新 Redis 集群中 Entity 的数据，成功后通过生产者生产一条消息，非实时后端消费此消息将 Entity 数据持久化到数据库中。
 
 View 数据只保存在实例内存中。View 内部存储的同源数据事实上只是到某些 Entity 的映射（id、指针等）。View 内部存储的聚合数据是对应的聚合后的计算值。由于 View 内部存储的事实上只是 Entity 的映射，保证 View 的数据一致性的前提下提高了性能。
 
@@ -158,7 +148,7 @@ View 数据的更新来源于 Patch 推送以及定时的 Entity 重新聚合计
 
 \begin{figure}[!htp]
     \centering
-    \includegraphics[height=5cm,width=14cm]{wsxy.png}
+    \includegraphics[height=3cm]{wsxy.png}
     \caption{WebSocket 业务通信协议示意图}
     \label{fig:wsxy}
   \end{figure}
@@ -202,7 +192,7 @@ View 数据的更新来源于 Patch 推送以及定时的 Entity 重新聚合计
 两进程的通信如图~\ref{fig:wsConnect}所示,蓝色 server 和 client 为同一进程，而黄色为另一进程，它们互相通信。
 \begin{figure}[!htp]
     \centering
-    \includegraphics[height=7.5cm]{wsConnect.png}
+    \includegraphics[width=14cm]{wsConnect.png}
     \caption{消息处理}
     \label{fig:wsConnect}
   \end{figure}
@@ -257,7 +247,57 @@ JavaScript 端内部有两个 map，一个存所有的 handler，一个存所有
 
 对于收到的响应型消息，在等待 map 中找到对应的 Promise，根据消息的 s 进行 resolve 或 reject。
 
-JavaScript 端代码完全用 class 实现，与 React 交互时会产生函数作为状态无法正确更新的问题，后续需换用自定义 hooks 实现。
+\subsection{实时表决服务}
+
+\subsubsection{实时表决服务流程设计}
+以管理人为例，实时表决服务流程如图~\ref{fig:wsbjlc}所示，具体流程如下：
+
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[height=6cm]{wsbjlc.png}
+    \caption{WebSocket 表决服务流程示意图}
+    \label{fig:wsbjlc}
+  \end{figure}
+
+  1. 管理人进入会议界面，通过前端界面交互向非实时服务后端发送请求；
+
+ 2. 后端返回统计数据给前端，前端收到请求后将数据在前端渲染，生成视图,前端接收到数据后需要将数据持久化到客户端上，从而减少后端每次计算全量数据的压力。为了明确前端数据是否需要被更新，后端数据应当给统计数据维护一个类似版本号的字段，若发现版本号变更，则更新数据，重新从非实时服务后端拉取一遍全量数据；
+
+3. 拉取全量数据后，前端向后端发送请求询问会议是否已结束；
+
+4. 非实时服务后端返回会议结束标识，根据会议结束标识出现如下两种情况：
+
+  \quad{}\quad{}a. 结束标识会议已结束，该会议所有数据已在第 2 步全部获取，该流程结束；
+  
+  \quad{}\quad{}b. 结束标识会议未结束，第 2 步获取的数据仅作为基础数据，进入第 5 步；
+  
+5. 会议未结束，则后续数据由管理人和实时后端建立 WebSocket 链接，等待数据推送；
+  
+6. WebSocket 获取会议相关 Entity，数据不存在，向非实时服务后端发起数据请求,只有 WebSocket 本地没有缓存全量 Entity 时才会向非实时服务后端返回全量的数据，其他时候直接依据内存 / Redis 返回的缓存计算结果；
+  
+7. 非实时服务后端返回所有的 Entity，WebSocket 将其缓存在 Redis 中，并缓存在内存中；
+  
+8. WebSocket 根据实际情况实时推送数据到前端，前端依据 WebSocket 推的数据进行更新，WebSocket 不会返回给前端全量的数据，而是一个数据片段，包含各个议题的表决情况、参会人数情况和被更新的数据（比如某自然人就议题 A 提了同意票）。
+
+  \subsubsection{实时表决服务内部数据流和控制流流转}
+  \begin{figure}[!htp]
+    \centering
+    \includegraphics[width=14cm]{wszqrlc.png}
+    \caption{债权人投票流程示意图}
+    \label{fig:wszqrlc}
+  \end{figure}
+
+  WebSocket 会在下列场合和非实时服务后端、前端（债权人端和管理人端）以及 Redis 服务进行通信：
+
+  1. 当 WebSocket 的缓存 Redis 没有缓存会议任何数据时，WebSocket 首先要和 非实时服务后端通信，获取该会议下全量的 Entity，然后 WebSocket 将这些 Entity 全部存储到 Redis 中，同时在内存中存储一份，它们是一次会议下的 meta 数据；同时，WebSocket 服务会根据得到的 Entity 数据形成一份 View 数据，View 数据表示的是各个议程的统计信息，View 数据不需要持久化到 Redis 中；
+  
+  2. 对于一个债权人而言，假设此时一个债权人投了票，则投票的行为通过前端的 WebSocket 客户端发送到 WebSocket 服务，WebSocket 服务根据收到的投票行为首先更新 Redis 的内存，然后更新对应的内存 Entity 实例，然后将这次表决结果存储在一个 Dirty 中（Dirty 是一段时间内表决 Data 的集合），并更新 View 数据，流程如图~\ref{fig:wszqrlc}所示。
+
+  3. 对于一个管理人而言，其在一开始就已经从非实时服务后端拿到了所有 Entity，因此只需要接收变化的数据和统计信息：
+
+  \quad{}\quad{}a. 在 WebSocket 链接第一次创建成功时，WebSocket 会向管理人推一次 Base 数据，Base 数据依托于 Entity 数据生成，只记录了投了票/参了会的人员；
+
+  \quad{}\quad{}b. 链接创建成功后，WebSocket 会每隔一段时间（5秒）会检查 Dirty 的数据，如果 Dirty 数据不为空，则向管理人发送 View 和 Dirty 的数据，若中间有数据发送失败，则连接断开。
 
 \subsection{实时聊天室服务}
 聊天室服务用于支持表决会议在线聊天，考虑到聊天室支持私聊，因此，每个用户在聊天室中的可见内容不同，即它们的 View 互不相同。
@@ -303,57 +343,7 @@ Message 的先后顺序能让聊天室快速构造 Base 推送。
 
 对于管理人，这样的定时任务为 10s，因为管理人几乎可以看见所有聊天内容，因此聊天室内的消息很多，必须得确保内部的消息的正确性和及时性。
 
-\subsection{实时表决服务}
 
-\subsubsection{实时表决服务流程设计}
-以管理人为例，实时表决服务流程如图~\ref{fig:wsbjlc}所示，具体流程如下：
-
-\begin{figure}[!htp]
-    \centering
-    \includegraphics[height=6cm]{wsbjlc.png}
-    \caption{WebSocket 表决服务流程示意图}
-    \label{fig:wsbjlc}
-  \end{figure}
-
-  1. 管理人进入会议界面，通过前端界面交互向非实时服务后端发送请求；
-
- 2. 后端返回统计数据给前端，前端收到请求后将数据在前端渲染，生成视图,前端接收到数据后需要将数据持久化到客户端上，从而减少后端每次计算全量数据的压力。为了明确前端数据是否需要被更新，后端数据应当给统计数据维护一个类似版本号的字段，若发现版本号变更，则更新数据，重新从非实时服务后端拉取一遍全量数据；
-
-3. 拉取全量数据后，前端向后端发送请求询问会议是否已结束；
-
-4. 非实时服务后端返回会议结束标识，根据会议结束标识出现如下两种情况：
-
-  \quad{}\quad{}a. 结束标识会议已结束，该会议所有数据已在第 2 步全部获取，该流程结束；
-  
-  \quad{}\quad{}b. 结束标识会议未结束，第 2 步获取的数据仅作为基础数据，进入第 5 步；
-  
-5. 会议未结束，则后续数据由管理人和实时后端建立 WebSocket 链接，等待数据推送；
-  
-6. WebSocket 获取会议相关 Entity，数据不存在，向非实时服务后端发起数据请求,只有 WebSocket 本地没有缓存全量 Entity 时才会向非实时服务后端返回全量的数据，其他时候直接依据内存 / Redis 返回的缓存计算结果；
-  
-7. 非实时服务后端返回所有的 Entity，WebSocket 将其缓存在 Redis 中，并缓存在内存中；
-  
-8. WebSocket 根据实际情况实时推送数据到前端，前端依据 WebSocket 推的数据进行更新，WebSocket 不会返回给前端全量的数据，而是一个数据片段，包含各个议题的表决情况、参会人数情况和被更新的数据（比如某自然人就议题 A 提了同意票）。
-
-  \subsubsection{实时表决服务内部数据流和控制流流转}
-  \begin{figure}[!htp]
-    \centering
-    \includegraphics[height=8cm, width=12cm]{wszqrlc.png}
-    \caption{债权人投票流程示意图}
-    \label{fig:wszqrlc}
-  \end{figure}
-
-  WebSocket 会在下列场合和非实时服务后端、前端（债权人端和管理人端）以及 Redis 服务进行通信：
-
-  1. 当 WebSocket 的缓存 Redis 没有缓存会议任何数据时，WebSocket 首先要和 非实时服务后端通信，获取该会议下全量的 Entity，然后 WebSocket 将这些 Entity 全部存储到 Redis 中，同时在内存中存储一份，它们是一次会议下的 meta 数据；同时，WebSocket 服务会根据得到的 Entity 数据形成一份 View 数据，View 数据表示的是各个议程的统计信息，View 数据不需要持久化到 Redis 中；
-  
-  2. 对于一个债权人而言，假设此时一个债权人投了票，则投票的行为通过前端的 WebSocket 客户端发送到 WebSocket 服务，WebSocket 服务根据收到的投票行为首先更新 Redis 的内存，然后更新对应的内存 Entity 实例，然后将这次表决结果存储在一个 Dirty 中（Dirty 是一段时间内表决 Data 的集合），并更新 View 数据，流程如图~\ref{fig:wszqrlc}所示。
-
-  3. 对于一个管理人而言，其在一开始就已经从非实时服务后端拿到了所有 Entity，因此只需要接收变化的数据和统计信息：
-
-  \quad{}\quad{}a. 在 WebSocket 链接第一次创建成功时，WebSocket 会向管理人推一次 Base 数据，Base 数据依托于 Entity 数据生成，只记录了投了票/参了会的人员；
-
-  \quad{}\quad{}b. 链接创建成功后，WebSocket 会每隔一段时间（5秒）会检查 Dirty 的数据，如果 Dirty 数据不为空，则向管理人发送 View 和 Dirty 的数据，若中间有数据发送失败，则连接断开。
 
   \section{本章小结}
   本章介绍了本系统实时后端部分的具体设计。对于实时后端，首先介绍了实时后端的数据分类、存储、推送、更新和数据流设计，然后对 WebSocket 的业务通信协议设计做出了说明，最后对实时聊天服务和实时表决服务的详细设计做出了说明。

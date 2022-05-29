@@ -1,9 +1,21 @@
 % !TEX root = ../main.tex
 
 \begin{abstract}
-  近年来，在疫情、新一代数字技术的快速发展以及国家对于数字化基础设施建设大力支持的影响下，各行各业都加快进行数字化变革。在破产领域中，债权人会议是破产程序中必不可少的一环，而由于现场会议召开的成本过高且十分受限于疫情，而传统会议系统又无法满足债权人会议需求，因此需要对债权人会议业务的全面数字化。在这种情况下，本文针对债权人会议人数多、请求在短时间内密集的特点提出高并发视频表决会议系统的设计与开发方案，结合相关法律知识，贴合债权人会议的现实业务，通过使用 Kafka 进行流量削峰解和使用 Redis 做高速缓存解决高并发情况下带来的问题，使债权人会议的线上召开更为流畅。本文在法律业务数字化和高并发实时系统的设计开发方面提供了一定的参考价值。
+  近年来，在疫情、新一代数字技术的快速发展以及国家对于数字化基础设施建设大力支持的影响下，各行各业都加快进行数字化变革。在破产领域中，债权人会议是破产程序中必不可少的一环，而由于现场会议召开的成本过高且十分受限于疫情，而传统会议系统又无法满足债权人会议需求，因此需要对债权人会议业务的全面数字化。
+  
+  本文针对债权人会议人数多、请求在短时间内密集、实时性要求高的特点提出针对高并发场景、实时反映表决情况的债权人会议系统的设计与开发方案，结合相关法律知识，贴合债权人会议的现实业务，通过使用 Kafka 进行流量削峰解和使用 Redis 做高速缓存解决高并发情况下带来的问题，通过对实时后端的针对设计让债权人会议系统的实时性更强，使债权人会议的线上召开更为流畅。
+  
+  目前对债权人会议系统的研究十分匮乏，本文在法律业务数字化、债权人会议系统的设计开发、高并发架构针对设计、实时业务开发等方面提供了一定的参考价值。通过实验，本系统性能达到预期效果，Mongo 写入性能为本系统性能瓶颈，之后优化方向可以从此方面着手。
 \end{abstract}
 
 \begin{abstract*}
-  In recent years, under the influence of the epidemic, the rapid development of a new generation of digital technology and the country's strong support for the construction of digital infrastructure, all industries are accelerating digital transformation. In the field of bankruptcy, creditors' meeting is an essential part of the bankruptcy process. However, due to the high cost of on-site meeting, which is very limited by the epidemic, and the traditional meeting system cannot meet the needs of creditors' meeting, it is necessary to fully digitize the creditors' meeting business. In this case, this paper proposes the design and development scheme of the high concurrent video voting conference system in view of the characteristics of the large number of creditors' meetings and the intensive requests in a short time. In combination with relevant legal knowledge, it fits the realistic business of creditors' meetings. Through the use of Kafka for traffic peak cutting solution and the use of Redis cache to solve the problem of high concurrency, so that the online meeting of creditors more smoothly. This paper provides some reference value in the design and development of legal business digitization and high concurrency real-time system.
+  In recent years, under the influence of the epidemic, the rapid development of a new generation of digital technology and the country's strong support for the construction of digital infrastructure, all industries are accelerating digital transformation. In the field of bankruptcy, creditors' meeting is an essential part of the bankruptcy process. However, due to the high cost of on-site meeting, which is very limited by the epidemic, and the traditional meeting system cannot meet the needs of creditors' meeting, it is necessary to fully digitize the creditors' meeting business.
+
+
+
+  In view of the characteristics of large number of creditors' meetings, intensive requests in a short time and high real-time requirements, this paper proposes the design and development scheme of creditors' meeting system for high concurrent scenarios and real-time reflection of voting situation, and combines relevant legal knowledge to fit the realistic business of creditors' meetings. Through the use of Kafka flow peak cutting solution and the use of Redis cache to solve the problem of high concurrency, through the design of the real-time back-end so that the real-time creditor meeting system is stronger, so that the online creditor meeting is more fluent.
+
+
+
+  At present, the research of creditor meeting system is very scarce. This paper provides some reference value in legal business digitization, creditor meeting system design and development, high concurrency architecture design, real-time business development and so on.Through the experiment, the system performance achieves the desired effect, and the Mongo write performance is the bottleneck of the system performance, and then the optimization direction can start from this aspect.
 \end{abstract*}
